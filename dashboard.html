@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Dashboard</title>
+
+<style>
+
+body{
+margin:0;
+font-family:arial;
+background:#061c28;
+color:white;
+}
+
+.header{
+padding:20px;
+text-align:center;
+font-size:22px;
+color:#00e0a4;
+font-weight:bold;
+}
+
+.user{
+text-align:center;
+margin-bottom:20px;
+color:#ccc;
+}
+
+.card{
+background:#102b3a;
+margin:15px;
+padding:20px;
+border-radius:15px;
+text-align:center;
+}
+
+.card h2{
+color:#00e0a4;
+margin:0;
+}
+
+.btn{
+display:block;
+width:80%;
+margin:15px auto;
+padding:15px;
+border:none;
+border-radius:12px;
+font-size:16px;
+background:#00e0a4;
+}
+
+.logout{
+background:#ff4b5c;
+color:white;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+Dashboard
+</div>
+
+<div class="user" id="userEmail">
+Loading...
+</div>
+
+<div class="card">
+<h2>Total Sales</h2>
+<p id="sales">0</p>
+</div>
+
+<div class="card">
+<h2>Today's Sales</h2>
+<p id="today">0</p>
+</div>
+
+<button class="btn">Add New Sale</button>
+
+<button class="btn logout" onclick="logout()">Logout</button>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+measurementId: "G-BHD1Z4TD7G"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+document.getElementById("userEmail").innerText = user.email;
+
+}
+else{
+
+window.location.href="login.html";
+
+}
+
+});
+
+window.logout=function(){
+
+signOut(auth).then(()=>{
+
+window.location.href="login.html";
+
+});
+
+}
+
+</script>
+
+</body>
+
+</html>
