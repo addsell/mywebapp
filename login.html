@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binoyog Login</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#0b1620;
+color:white;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+.container{
+width:90%;
+max-width:380px;
+}
+
+.title{
+text-align:center;
+margin-bottom:25px;
+}
+
+.title h1{
+color:#00d09c;
+margin:0;
+}
+
+.box{
+background:#111f2b;
+padding:25px;
+border-radius:12px;
+}
+
+.tabs{
+display:flex;
+justify-content:space-between;
+margin-bottom:20px;
+}
+
+.tabs span{
+cursor:pointer;
+color:#aaa;
+}
+
+.tabs .active{
+color:#00d09c;
+border-bottom:2px solid #00d09c;
+padding-bottom:5px;
+}
+
+input{
+width:100%;
+padding:12px;
+margin:8px 0;
+border:none;
+border-radius:6px;
+background:#1e2c38;
+color:white;
+}
+
+button{
+width:100%;
+padding:13px;
+background:#00d09c;
+border:none;
+border-radius:8px;
+font-size:16px;
+margin-top:10px;
+}
+
+.link{
+text-align:center;
+margin-top:10px;
+color:#00d09c;
+font-size:14px;
+}
+
+.hidden{
+display:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<div class="title">
+<h1>Binoyog</h1>
+<p>Hello, Welcome to Binoyog</p>
+</div>
+
+<div class="box">
+
+<div class="tabs">
+<span id="loginTab" class="active" onclick="showLogin()">Log in</span>
+<span id="signupTab" onclick="showSignup()">Sign up</span>
+</div>
+
+<div id="loginForm">
+
+<input type="text" placeholder="Phone number">
+<input type="password" placeholder="Password">
+
+<button>Log in</button>
+
+<div class="link">Forgot password?</div>
+
+</div>
+
+<div id="signupForm" class="hidden">
+
+<input type="text" placeholder="Full name">
+<input type="text" placeholder="Phone number">
+<input type="password" placeholder="Password">
+<input type="password" placeholder="Confirm password">
+
+<button>Continue</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+function showSignup(){
+document.getElementById("signupForm").classList.remove("hidden")
+document.getElementById("loginForm").classList.add("hidden")
+
+document.getElementById("signupTab").classList.add("active")
+document.getElementById("loginTab").classList.remove("active")
+}
+
+function showLogin(){
+document.getElementById("loginForm").classList.remove("hidden")
+document.getElementById("signupForm").classList.add("hidden")
+
+document.getElementById("loginTab").classList.add("active")
+document.getElementById("signupTab").classList.remove("active")
+}
+
+</script>
+
+</body>
+</html>
