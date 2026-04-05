@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Login</title>
+</head>
+
+<body>
+
+<h2>Login</h2>
+
+<input type="email" id="email" placeholder="Enter Email"><br><br>
+
+<input type="password" id="password" placeholder="Enter Password"><br><br>
+
+<button onclick="login()">Login</button>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-analytics.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+  authDomain: "mywebapp-93636.firebaseapp.com",
+  projectId: "mywebapp-93636",
+  storageBucket: "mywebapp-93636.firebasestorage.app",
+  messagingSenderId: "644012557966",
+  appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+  measurementId: "G-BHD1Z4TD7G"
+};
+
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const auth = getAuth(app);
+
+window.login = function(){
+
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+
+signInWithEmailAndPassword(auth, email, password)
+.then(() => {
+
+alert("Login Successful");
+
+})
+.catch((error) => {
+
+alert(error.message);
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
