@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Products</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(#6fb7d6,#d6efd6);
+padding:15px;
+}
+
+/* HEADER */
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.addBtn{
+background:#f7b955;
+padding:10px 15px;
+border-radius:10px;
+font-weight:bold;
+cursor:pointer;
+}
+
+/* SEARCH */
+
+.searchBox{
+margin-top:15px;
+background:#7ed08d;
+padding:10px;
+border-radius:30px;
+}
+
+.searchBox input{
+width:100%;
+border:none;
+background:none;
+font-size:16px;
+outline:none;
+}
+
+/* PRODUCT CARD */
+
+.product{
+margin-top:20px;
+padding:15px;
+border-radius:20px;
+background:linear-gradient(90deg,#7f5af0,#00c16e);
+color:white;
+display:flex;
+align-items:center;
+gap:15px;
+}
+
+.product img{
+width:80px;
+height:80px;
+border-radius:10px;
+object-fit:cover;
+background:white;
+}
+
+.info{
+flex:1;
+}
+
+.actions button{
+margin-right:5px;
+padding:6px 10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.delete{
+background:red;
+color:white;
+}
+
+/* ADD PRODUCT */
+
+.addPage{
+display:none;
+margin-top:20px;
+background:white;
+padding:15px;
+border-radius:15px;
+}
+
+.addPage input{
+width:100%;
+padding:12px;
+margin:10px 0;
+border:none;
+border-radius:10px;
+background:#f1f1f1;
+}
+
+.saveBtn{
+background:#f7b955;
+padding:12px;
+border:none;
+width:100%;
+border-radius:10px;
+font-size:16px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+
+<h2>📦 Products</h2>
+
+<div class="addBtn" onclick="openAdd()">+ Add Product</div>
+
+</div>
+
+
+<!-- SEARCH -->
+
+<div class="searchBox">
+
+<input type="text" id="search" placeholder="Search Product" onkeyup="searchProduct()">
+
+</div>
+
+
+<!-- PRODUCT LIST -->
+
+<div id="productList"></div>
+
+
+
+<!-- ADD PRODUCT PAGE -->
+
+<div class="addPage" id="addPage">
+
+<h3>Add Product</h3>
+
+<input type="file" id="image">
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="text" id="code" placeholder="Product Code">
+
+<input type="number" id="stock" placeholder="Stock">
+
+<input type="number" id="price" placeholder="Price">
+
+<button class="saveBtn" onclick="addProduct()">Save Product</button>
+
+</div>
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+getAuth,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+getDocs,
+deleteDoc,
+doc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import {
+getStorage,
+ref,
+uploadBytes,
+getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const db = getFirestore(app);
+
+const storage = getStorage(app);
+
+let userId="";
+
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId=user.uid;
+
+loadProducts();
+
+}else{
+
+window.location="login.html";
+
+}
+
+});
+
+
+
+window.openAdd=function(){
+
+const page=document.getElementById("addPage");
+
+page.style.display= page.style.display==="block" ? "none" : "block";
+
+}
+
+
+
+/* ADD PRODUCT */
+
+window.addProduct = async function(){
+
+const name=document.getElementById("name").value;
+
+const code=document.getElementById("code").value;
+
+const stock=document.getElementById("stock").value;
+
+const price=document.getElementById("price").value;
+
+const file=document.getElementById("image").files[0];
+
+if(!name || !stock || !price){
+
+alert("Fill all fields");
+
+return;
+
+}
+
+let imageUrl="";
+
+if(file){
+
+const storageRef=ref(storage,"products/"+userId+"/"+Date.now()+file.name);
+
+await uploadBytes(storageRef,file);
+
+imageUrl=await getDownloadURL(storageRef);
+
+}
+
+await addDoc(collection(db,"users",userId,"products"),{
+
+name:name,
+code:code,
+stock:stock,
+price:price,
+image:imageUrl
+
+});
+
+alert("Product Added");
+
+document.getElementById("addPage").style.display="none";
+
+loadProducts();
+
+}
+
+
+
+/* LOAD PRODUCT */
+
+async function loadProducts(){
+
+const list=document.getElementById("productList");
+
+list.innerHTML="";
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"products"));
+
+querySnapshot.forEach((docSnap)=>{
+
+const data=docSnap.data();
+
+list.innerHTML+=`
+
+<div class="product">
+
+<img src="${data.image || ''}">
+
+<div class="info">
+
+<b>${data.name}</b><br>
+
+Code: ${data.code || ''}<br>
+
+Stock: ${data.stock}<br>
+
+Price: ${data.price} ৳
+
+</div>
+
+<div class="actions">
+
+<button class="delete" onclick="deleteProduct('${docSnap.id}')">Delete</button>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+}
+
+
+
+/* DELETE PRODUCT */
+
+window.deleteProduct = async function(id){
+
+if(confirm("Delete this product?")){
+
+await deleteDoc(doc(db,"users",userId,"products",id));
+
+loadProducts();
+
+}
+
+}
+
+
+
+/* SEARCH */
+
+window.searchProduct=function(){
+
+const input=document.getElementById("search").value.toLowerCase();
+
+const products=document.getElementsByClassName("product");
+
+for(let i=0;i<products.length;i++){
+
+let text=products[i].innerText.toLowerCase();
+
+products[i].style.display=text.includes(input)?"flex":"none";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
