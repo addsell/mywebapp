@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Products</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(#6fb7d6,#d6efd6);
+padding:15px;
+}
+
+h2{
+text-align:center;
+}
+
+input,select{
+width:100%;
+padding:12px;
+margin:8px 0;
+border-radius:10px;
+border:none;
+font-size:16px;
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:10px;
+border:none;
+border-radius:10px;
+background:#28a745;
+color:white;
+font-size:16px;
+}
+
+.search{
+margin-top:20px;
+}
+
+.product{
+background:white;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+box-shadow:0 2px 5px rgba(0,0,0,0.2);
+}
+
+.product img{
+width:60px;
+height:60px;
+border-radius:10px;
+}
+
+.actions button{
+width:auto;
+margin:5px;
+padding:6px 10px;
+font-size:14px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h2>📦 Products</h2>
+
+<input type="file" id="image">
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="number" id="stock" placeholder="Stock">
+
+<input type="number" id="price" placeholder="Price">
+
+<button onclick="addProduct()">Save Product</button>
+
+
+<div class="search">
+<input type="text" id="search" placeholder="Search Product" onkeyup="searchProduct()">
+</div>
+
+<div id="productList"></div>
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import { getStorage,ref,uploadBytes,getDownloadURL } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain: "mywebapp-93636.firebaseapp.com",
+
+projectId: "mywebapp-93636",
+
+storageBucket: "mywebapp-93636.firebasestorage.app",
+
+messagingSenderId: "644012557966",
+
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const db = getFirestore(app);
+
+const storage = getStorage(app);
+
+let userId="";
+
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId=user.uid;
+
+loadProducts();
+
+}else{
+
+window.location="login.html";
+
+}
+
+});
+
+
+
+window.addProduct = async function(){
+
+const name=document.getElementById("name").value;
+
+const stock=document.getElementById("stock").value;
+
+const price=document.getElementById("price").value;
+
+const file=document.getElementById("image").files[0];
+
+if(!name || !stock || !price){
+
+alert("Fill all fields");
+
+return;
+
+}
+
+let imageUrl="";
+
+if(file){
+
+const storageRef=ref(storage,"products/"+Date.now()+file.name);
+
+await uploadBytes(storageRef,file);
+
+imageUrl=await getDownloadURL(storageRef);
+
+}
+
+await addDoc(collection(db,"users",userId,"products"),{
+
+name:name,
+
+stock:stock,
+
+price:price,
+
+image:imageUrl
+
+});
+
+alert("Product Added");
+
+loadProducts();
+
+}
+
+
+
+async function loadProducts(){
+
+const list=document.getElementById("productList");
+
+list.innerHTML="";
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"products"));
+
+querySnapshot.forEach((docSnap)=>{
+
+const data=docSnap.data();
+
+list.innerHTML+=`
+
+<div class="product">
+
+<img src="${data.image}">
+
+<b>${data.name}</b>
+
+<br>
+
+Stock: ${data.stock}
+
+<br>
+
+Price: ${data.price}
+
+<div class="actions">
+
+<button onclick="deleteProduct('${docSnap.id}')">Delete</button>
+
+</div>
+
+</div>
+
+`;
+
+});
+
+}
+
+
+
+window.deleteProduct = async function(id){
+
+await deleteDoc(doc(db,"users",userId,"products",id));
+
+loadProducts();
+
+}
+
+
+
+window.searchProduct=function(){
+
+const input=document.getElementById("search").value.toLowerCase();
+
+const products=document.getElementsByClassName("product");
+
+for(let i=0;i<products.length;i++){
+
+let text=products[i].innerText.toLowerCase();
+
+products[i].style.display=text.includes(input)?"block":"none";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
