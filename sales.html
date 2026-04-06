@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sales POS</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(#6fb7d6,#b7e3b7);
+padding:15px;
+}
+
+/* TOP */
+
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.totalBox{
+background:#000;
+color:white;
+padding:10px 15px;
+border-radius:10px;
+}
+
+/* SEARCH */
+
+.search{
+margin-top:20px;
+}
+
+.search input{
+width:100%;
+padding:12px;
+border-radius:10px;
+border:none;
+}
+
+/* PRODUCT */
+
+.product{
+background:white;
+padding:12px;
+margin-top:10px;
+border-radius:10px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.product button{
+background:#00c16e;
+border:none;
+padding:5px 10px;
+border-radius:6px;
+color:white;
+}
+
+/* CART */
+
+.cart{
+margin-top:20px;
+background:white;
+padding:10px;
+border-radius:10px;
+}
+
+.cartItem{
+display:flex;
+justify-content:space-between;
+margin:5px 0;
+}
+
+/* PAY */
+
+.pay{
+margin-top:20px;
+background:white;
+padding:15px;
+border-radius:10px;
+}
+
+.pay input{
+width:100%;
+padding:10px;
+margin-top:5px;
+border-radius:8px;
+border:1px solid gray;
+}
+
+.pay button{
+width:100%;
+margin-top:10px;
+padding:12px;
+border:none;
+background:#ff9800;
+color:white;
+font-size:16px;
+border-radius:10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="top">
+
+<h2>Sales POS</h2>
+
+<div class="totalBox">Total: <span id="total">0</span>৳</div>
+
+</div>
+
+
+<div class="search">
+
+<input type="text" id="search" placeholder="Search Product" onkeyup="searchProduct()">
+
+</div>
+
+
+<div id="productList"></div>
+
+
+<!-- CART -->
+
+<div class="cart">
+
+<h3>Cart</h3>
+
+<div id="cartList"></div>
+
+</div>
+
+
+<!-- PAYMENT -->
+
+<div class="pay">
+
+<label>Receive Amount</label>
+
+<input type="number" id="receive" onkeyup="calculateChange()">
+
+<label>Return</label>
+
+<input type="text" id="change" readonly>
+
+<button onclick="completeSale()">Complete Sale</button>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import { getFirestore,collection,getDocs,addDoc,doc,updateDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+
+const firebaseConfig={
+
+apiKey:"AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain:"mywebapp-93636.firebaseapp.com",
+
+projectId:"mywebapp-93636",
+
+storageBucket:"mywebapp-93636.firebasestorage.app",
+
+messagingSenderId:"644012557966",
+
+appId:"1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+
+const app=initializeApp(firebaseConfig);
+
+const auth=getAuth(app);
+
+const db=getFirestore(app);
+
+
+let userId="";
+let products=[];
+let cart=[];
+let total=0;
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId=user.uid;
+
+loadProducts();
+
+}else{
+
+window.location="login.html";
+
+}
+
+});
+
+
+async function loadProducts(){
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"products"));
+
+querySnapshot.forEach((docSnap)=>{
+
+let d=docSnap.data();
+
+products.push({
+
+id:docSnap.id,
+
+name:d.name,
+
+price:Number(d.price),
+
+stock:Number(d.stock)
+
+})
+
+})
+
+displayProducts(products)
+
+}
+
+
+function displayProducts(data){
+
+let list=document.getElementById("productList");
+
+list.innerHTML="";
+
+data.forEach(p=>{
+
+list.innerHTML+=`
+
+<div class="product">
+
+${p.name} (${p.stock})
+
+<button onclick="addCart('${p.id}')">Add</button>
+
+</div>
+
+`
+
+})
+
+}
+
+
+window.addCart=function(id){
+
+let product=products.find(p=>p.id===id)
+
+let item=cart.find(c=>c.id===id)
+
+if(item){
+
+item.qty++
+
+}else{
+
+cart.push({...product,qty:1})
+
+}
+
+updateCart()
+
+}
+
+
+function updateCart(){
+
+let list=document.getElementById("cartList")
+
+list.innerHTML=""
+
+total=0
+
+cart.forEach(c=>{
+
+let sub=c.qty*c.price
+
+total+=sub
+
+list.innerHTML+=`
+
+<div class="cartItem">
+
+${c.name} x${c.qty}
+
+<span>${sub}৳</span>
+
+</div>
+
+`
+
+})
+
+document.getElementById("total").innerText=total
+
+}
+
+
+window.calculateChange=function(){
+
+let receive=document.getElementById("receive").value
+
+let change=receive-total
+
+document.getElementById("change").value=change
+
+}
+
+
+window.completeSale=async function(){
+
+if(cart.length==0){
+
+alert("Cart empty")
+
+return
+
+}
+
+
+await addDoc(collection(db,"users",userId,"sales"),{
+
+cart:cart,
+
+total:total,
+
+date:new Date()
+
+})
+
+
+alert("Sale Complete")
+
+location.reload()
+
+}
+
+
+window.searchProduct=function(){
+
+let text=document.getElementById("search").value.toLowerCase()
+
+let filtered=products.filter(p=>p.name.toLowerCase().includes(text))
+
+displayProducts(filtered)
+
+}
+
+</script>
+
+</body>
+</html>
