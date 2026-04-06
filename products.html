@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Products</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#f2f2f2;
+padding:15px;
+}
+
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.addBtn{
+background:#28a745;
+color:white;
+padding:10px 15px;
+border-radius:10px;
+cursor:pointer;
+}
+
+.searchBox{
+margin-top:20px;
+}
+
+.searchBox input{
+width:100%;
+padding:10px;
+border-radius:10px;
+border:none;
+}
+
+.product{
+background:white;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+display:flex;
+align-items:center;
+gap:10px;
+box-shadow:0 2px 5px rgba(0,0,0,0.2);
+}
+
+.product img{
+width:70px;
+height:70px;
+border-radius:10px;
+object-fit:cover;
+}
+
+.info{
+flex:1;
+}
+
+.delete{
+background:red;
+color:white;
+border:none;
+padding:6px 10px;
+border-radius:6px;
+cursor:pointer;
+}
+
+.addPage{
+display:none;
+margin-top:20px;
+background:white;
+padding:15px;
+border-radius:10px;
+}
+
+.addPage input{
+width:100%;
+padding:10px;
+margin:8px 0;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.saveBtn{
+background:#28a745;
+color:white;
+border:none;
+padding:10px;
+width:100%;
+border-radius:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top">
+
+<h2>Products</h2>
+
+<div class="addBtn" onclick="openAdd()">+ Add Product</div>
+
+</div>
+
+
+<div class="searchBox">
+<input type="text" id="search" placeholder="Search Product" onkeyup="searchProduct()">
+</div>
+
+
+<div id="productList"></div>
+
+
+<div class="addPage" id="addPage">
+
+<h3>Add Product</h3>
+
+<input type="file" id="image">
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="text" id="code" placeholder="Product Code">
+
+<input type="number" id="stock" placeholder="Stock">
+
+<input type="number" id="price" placeholder="Price">
+
+<button class="saveBtn" onclick="addProduct()">Save Product</button>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { 
+getAuth,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import { 
+getFirestore,
+collection,
+addDoc,
+getDocs,
+deleteDoc,
+doc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import { 
+getStorage,
+ref,
+uploadBytes,
+getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain: "mywebapp-93636.firebaseapp.com",
+
+projectId: "mywebapp-93636",
+
+storageBucket: "mywebapp-93636.firebasestorage.app",
+
+messagingSenderId: "644012557966",
+
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const db = getFirestore(app);
+
+const storage = getStorage(app);
+
+let userId = "";
+
+
+// 🔐 USER CHECK
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId = user.uid;
+
+loadProducts();
+
+}else{
+
+alert("Login Required");
+
+window.location.href="login.html";
+
+}
+
+});
+
+
+
+// ADD PAGE OPEN
+
+window.openAdd=function(){
+
+document.getElementById("addPage").style.display="block";
+
+}
+
+
+
+// ADD PRODUCT
+
+window.addProduct = async function(){
+
+const name=document.getElementById("name").value;
+
+const code=document.getElementById("code").value;
+
+const stock=document.getElementById("stock").value;
+
+const price=document.getElementById("price").value;
+
+const file=document.getElementById("image").files[0];
+
+
+if(!name || !stock || !price){
+
+alert("Fill all fields");
+
+return;
+
+}
+
+
+let imageUrl="";
+
+if(file){
+
+const storageRef=ref(storage,"products/"+Date.now()+file.name);
+
+await uploadBytes(storageRef,file);
+
+imageUrl=await getDownloadURL(storageRef);
+
+}
+
+
+
+await addDoc(collection(db,"users",userId,"products"),{
+
+name:name,
+
+code:code,
+
+stock:stock,
+
+price:price,
+
+image:imageUrl
+
+});
+
+
+alert("Product Added");
+
+document.getElementById("addPage").style.display="none";
+
+loadProducts();
+
+}
+
+
+
+// LOAD PRODUCTS
+
+async function loadProducts(){
+
+const list=document.getElementById("productList");
+
+list.innerHTML="";
+
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"products"));
+
+querySnapshot.forEach((docSnap)=>{
+
+const data=docSnap.data();
+
+list.innerHTML+=`
+
+<div class="product">
+
+<img src="${data.image || ''}">
+
+<div class="info">
+
+<b>${data.name}</b>
+
+<br>
+
+Code: ${data.code}
+
+<br>
+
+Stock: ${data.stock}
+
+<br>
+
+Price: ${data.price} ৳
+
+</div>
+
+<button class="delete" onclick="deleteProduct('${docSnap.id}')">Delete</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+
+
+// DELETE PRODUCT
+
+window.deleteProduct = async function(id){
+
+await deleteDoc(doc(db,"users",userId,"products",id));
+
+loadProducts();
+
+}
+
+
+
+// SEARCH
+
+window.searchProduct=function(){
+
+const input=document.getElementById("search").value.toLowerCase();
+
+const products=document.getElementsByClassName("product");
+
+
+for(let i=0;i<products.length;i++){
+
+let text=products[i].innerText.toLowerCase();
+
+products[i].style.display=text.includes(input)?"flex":"none";
+
+}
+
+}
+
+</script>
+
+</body>
+</html>
