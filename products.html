@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Products</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f4f4;
+margin:0;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:white;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+.addBtn{
+background:#28a745;
+color:white;
+border:none;
+padding:10px 15px;
+border-radius:6px;
+}
+
+.search{
+width:100%;
+padding:10px;
+margin:10px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+.products{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+gap:10px;
+padding:10px;
+}
+
+.card{
+background:white;
+padding:10px;
+border-radius:10px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+text-align:center;
+}
+
+.card img{
+width:100%;
+height:120px;
+object-fit:cover;
+border-radius:8px;
+}
+
+.popup{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.8);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.popup img{
+max-width:90%;
+max-height:90%;
+}
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:#00000080;
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:white;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:400px;
+}
+
+input,select{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+
+.categoryBox{
+display:flex;
+gap:5px;
+}
+
+.categoryList{
+margin-top:10px;
+max-height:120px;
+overflow:auto;
+border:1px solid #ddd;
+padding:5px;
+}
+
+.catItem{
+display:flex;
+justify-content:space-between;
+padding:5px;
+border-bottom:1px solid #eee;
+}
+
+.deleteCat{
+background:red;
+color:white;
+border:none;
+padding:3px 8px;
+border-radius:4px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>Products</h2>
+<button class="addBtn" onclick="openForm()">Add Product</button>
+</div>
+
+<input type="text" class="search" placeholder="Search Product..." onkeyup="searchProduct(this.value)">
+
+<div class="products" id="productList"></div>
+
+<div class="popup" id="imgPopup" onclick="closePopup()">
+<img id="popupImg">
+</div>
+
+<div class="modal" id="productModal">
+
+<div class="form">
+
+<h3>Add Product</h3>
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="text" id="code" placeholder="Product Code">
+
+<select id="category"></select>
+
+<div class="categoryBox">
+<input type="text" id="newCategory" placeholder="New Category">
+<button onclick="addCategory()">Add</button>
+</div>
+
+<div class="categoryList" id="categoryList"></div>
+
+<input type="number" id="stock" placeholder="Total Stock">
+
+<input type="number" id="purchase" placeholder="Purchase Price">
+
+<input type="number" id="sell" placeholder="Sell Price">
+
+<input type="number" id="mrp" placeholder="MRP">
+
+<input type="file" id="imageFile">
+
+<button onclick="saveProduct()">Save Product</button>
+
+</div>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc } 
+from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import { getAuth,onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import { getStorage,ref,uploadBytes,getDownloadURL } 
+from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+const auth = getAuth(app);
+const storage = getStorage(app);
+
+let userId=null;
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+userId=user.uid;
+loadProducts();
+loadCategories();
+}
+
+});
+
+async function saveProduct(){
+
+const name=document.getElementById("name").value;
+const code=document.getElementById("code").value;
+const category=document.getElementById("category").value;
+const stock=document.getElementById("stock").value;
+const purchase=document.getElementById("purchase").value;
+const sell=document.getElementById("sell").value;
+const mrp=document.getElementById("mrp").value;
+
+const file=document.getElementById("imageFile").files[0];
+
+let imageURL="";
+
+if(file){
+
+const storageRef=ref(storage,"products/"+Date.now());
+
+await uploadBytes(storageRef,file);
+
+imageURL=await getDownloadURL(storageRef);
+
+}
+
+await addDoc(collection(db,"users",userId,"products"),{
+
+name,
+code,
+category,
+stock:Number(stock),
+purchase,
+sell,
+mrp,
+image:imageURL
+
+});
+
+closeForm();
+loadProducts();
+
+}
+
+window.saveProduct=saveProduct;
+
+
+async function loadProducts(){
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"products"));
+
+const list=document.getElementById("productList");
+
+list.innerHTML="";
+
+querySnapshot.forEach((docu)=>{
+
+const p=docu.data();
+
+list.innerHTML+=`
+
+<div class="card">
+
+<img src="${p.image}" onclick="showImage('${p.image}')">
+
+<h4>${p.name}</h4>
+
+<p>Stock: ${p.stock}</p>
+
+<p>Price: ${p.sell}</p>
+
+<button onclick="deleteProduct('${docu.id}')">Delete</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+
+window.deleteProduct=async(id)=>{
+
+await deleteDoc(doc(db,"users",userId,"products",id));
+
+loadProducts();
+
+}
+
+
+async function addCategory(){
+
+const name=document.getElementById("newCategory").value;
+
+if(name==="") return;
+
+await addDoc(collection(db,"categories"),{name:name});
+
+document.getElementById("newCategory").value="";
+
+loadCategories();
+
+}
+
+window.addCategory=addCategory;
+
+
+async function loadCategories(){
+
+const snap=await getDocs(collection(db,"categories"));
+
+const select=document.getElementById("category");
+const list=document.getElementById("categoryList");
+
+select.innerHTML="";
+list.innerHTML="";
+
+snap.forEach((docu)=>{
+
+const c=docu.data();
+
+select.innerHTML+=`<option>${c.name}</option>`;
+
+list.innerHTML+=`
+
+<div class="catItem">
+
+<span>${c.name}</span>
+
+<button class="deleteCat" onclick="deleteCategory('${docu.id}')">Delete</button>
+
+</div>
+
+`;
+
+});
+
+}
+
+
+window.deleteCategory=async(id)=>{
+
+await deleteDoc(doc(db,"categories",id));
+
+loadCategories();
+
+}
+
+
+window.showImage=(src)=>{
+
+document.getElementById("popupImg").src=src;
+
+document.getElementById("imgPopup").style.display="flex";
+
+}
+
+window.closePopup=()=>{
+
+document.getElementById("imgPopup").style.display="none";
+
+}
+
+window.openForm=()=>{
+
+document.getElementById("productModal").style.display="flex";
+
+}
+
+window.closeForm=()=>{
+
+document.getElementById("productModal").style.display="none";
+
+}
+
+window.searchProduct=(text)=>{
+
+text=text.toLowerCase();
+
+const cards=document.querySelectorAll(".card");
+
+cards.forEach(c=>{
+
+const name=c.innerText.toLowerCase();
+
+if(name.includes(text)){
+c.style.display="block";
+}else{
+c.style.display="none";
+}
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
