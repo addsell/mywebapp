@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Product List</title>
+
+<style>
+
+body{
+font-family:arial;
+margin:0;
+background:#f2f3f7;
+}
+
+.header{
+padding:15px;
+font-size:22px;
+font-weight:bold;
+text-align:center;
+color:#4c5ab3;
+background:white;
+}
+
+.search{
+
+padding:10px;
+
+}
+
+.search input{
+
+width:100%;
+padding:12px;
+border-radius:10px;
+border:1px solid #ccc;
+
+}
+
+.lowstock{
+
+background:#ffe1b7;
+margin:10px;
+padding:10px;
+border-radius:8px;
+color:#cc6a00;
+font-size:14px;
+
+}
+
+.product{
+
+background:white;
+margin:10px;
+padding:10px;
+border-radius:10px;
+display:flex;
+gap:10px;
+align-items:center;
+
+}
+
+.product img{
+
+width:60px;
+height:60px;
+object-fit:cover;
+
+}
+
+.info{
+
+flex:1;
+
+}
+
+.name{
+
+font-weight:bold;
+font-size:16px;
+
+}
+
+.code{
+
+color:#5f8ed7;
+font-size:14px;
+
+}
+
+.price{
+
+display:flex;
+gap:15px;
+font-size:14px;
+margin-top:5px;
+
+}
+
+.sale{
+
+color:red;
+
+}
+
+.purchase{
+
+color:green;
+
+}
+
+.stock{
+
+color:green;
+
+}
+
+.addbtn{
+
+position:fixed;
+bottom:20px;
+right:20px;
+background:#4c5ab3;
+color:white;
+padding:15px 20px;
+border-radius:10px;
+font-size:16px;
+border:none;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">Product List</div>
+
+<div class="search">
+<input type="text" id="search" placeholder="Search by name or code" onkeyup="searchProduct()">
+</div>
+
+<div class="lowstock" id="lowstockmsg"></div>
+
+<div id="productList"></div>
+
+<button class="addbtn" onclick="location.href='add-product.html'">
++ Add Product
+</button>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain: "mywebapp-93636.firebaseapp.com",
+
+projectId: "mywebapp-93636",
+
+storageBucket: "mywebapp-93636.firebasestorage.app",
+
+messagingSenderId: "644012557966",
+
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+
+measurementId: "G-BHD1Z4TD7G"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+let products=[]
+
+async function loadProducts(){
+
+let snapshot=await getDocs(collection(db,"products"))
+
+let list=document.getElementById("productList")
+
+let lowcount=0
+
+snapshot.forEach(doc=>{
+
+let data=doc.data()
+
+products.push(data)
+
+if(Number(data.stock)<=Number(data.alert)){
+
+lowcount++
+
+}
+
+})
+
+document.getElementById("lowstockmsg").innerHTML=
+lowcount+" Products have low stock"
+
+display(products)
+
+}
+
+loadProducts()
+
+
+function display(data){
+
+let list=document.getElementById("productList")
+
+list.innerHTML=""
+
+data.forEach(p=>{
+
+list.innerHTML+=`
+
+<div class="product">
+
+<img src="${p.image}">
+
+<div class="info">
+
+<div class="name">${p.name}</div>
+
+<div class="code">Code: ${p.code}</div>
+
+<div class="price">
+
+<div class="sale">Sale: $${p.sell}</div>
+
+<div class="purchase">$${p.purchase}</div>
+
+<div class="stock">${p.stock}</div>
+
+</div>
+
+</div>
+
+</div>
+
+`
+
+})
+
+}
+
+
+window.searchProduct=function(){
+
+let text=document.getElementById("search").value.toLowerCase()
+
+let filtered=products.filter(p=>
+
+p.name.toLowerCase().includes(text) ||
+
+p.code.toLowerCase().includes(text)
+
+)
+
+display(filtered)
+
+}
+
+</script>
+
+</body>
+
+</html>
