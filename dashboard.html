@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Dashboard</title>
+
+<style>
+
+*{
+box-sizing:border-box;
+}
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(135deg,#4da3c7,#b5e0b3);
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+overflow:hidden;
+}
+
+/* HEADER */
+
+.header{
+margin:10px;
+padding:12px;
+border-radius:15px;
+background:#2b4e5d;
+color:#9cff3d;
+border:2px solid #9cff3d;
+font-size:16px;
+text-align:center;
+}
+
+/* USER BAR */
+
+.userbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:5px 15px;
+font-size:14px;
+color:#033;
+}
+
+/* GRID */
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:12px;
+padding:10px;
+flex:1;
+align-content:center;
+}
+
+/* CARD */
+
+.card{
+background:linear-gradient(145deg,#3b5f70,#264653);
+border-radius:18px;
+padding:16px 8px;
+color:#baff4a;
+font-size:15px;
+text-align:center;
+box-shadow:0 4px 10px rgba(0,0,0,0.25);
+cursor:pointer;
+transition:0.2s;
+}
+
+.card:hover{
+transform:scale(1.06);
+background:linear-gradient(145deg,#4f7d90,#2d4c5c);
+}
+
+.icon{
+font-size:28px;
+margin-bottom:6px;
+}
+
+/* LOGOUT */
+
+.logout{
+text-align:center;
+margin-bottom:8px;
+}
+
+.logout button{
+background:#2aa84a;
+border:none;
+padding:10px 28px;
+border-radius:25px;
+font-size:16px;
+color:white;
+cursor:pointer;
+box-shadow:0 3px 6px rgba(0,0,0,0.3);
+}
+
+/* FOOTER */
+
+.footer{
+background:#2f8a1c;
+color:#a8ff5a;
+padding:8px;
+font-size:12px;
+text-align:center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+🔥 I have to perform better today than yesterday
+</div>
+
+<div class="userbar">
+<div id="userEmail">Loading...</div>
+<div>Dashboard</div>
+</div>
+
+<div class="grid">
+
+<div class="card" onclick="openPage('shop.html')">
+<div class="icon">🛒</div>
+Shop
+</div>
+
+<div class="card" onclick="openPage('products.html')">
+<div class="icon">📦</div>
+Products
+</div>
+
+<div class="card" onclick="openPage('stock.html')">
+<div class="icon">📊</div>
+Stock
+</div>
+
+<div class="card" onclick="openPage('sale.html')">
+<div class="icon">💰</div>
+Sale
+</div>
+
+<div class="card" onclick="openPage('salesreport.html')">
+<div class="icon">📈</div>
+Sales Report
+</div>
+
+<div class="card" onclick="openPage('deoreport.html')">
+<div class="icon">📋</div>
+Deo Reports
+</div>
+
+<div class="card" onclick="openPage('note.html')">
+<div class="icon">📝</div>
+Note
+</div>
+
+<div class="card" onclick="openPage('summary.html')">
+<div class="icon">📊</div>
+Own Summary
+</div>
+
+<div class="card" onclick="openPage('profile.html')">
+<div class="icon">👤</div>
+Profile
+</div>
+
+</div>
+
+<div class="logout">
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="footer">
+A good sales representative keeps track of all activities.
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { 
+getAuth, 
+signOut, 
+onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+
+/* AUTH CHECK */
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+document.getElementById("userEmail").innerText="👤 "+user.email
+
+}else{
+
+window.location="login.html"
+
+}
+
+})
+
+
+/* LOGOUT */
+
+window.logout=function(){
+
+signOut(auth).then(()=>{
+
+alert("Logout Successful")
+
+window.location="login.html"
+
+})
+
+}
+
+
+/* OPEN PAGE */
+
+window.openPage=function(page){
+
+window.location=page
+
+}
+
+</script>
+
+</body>
+</html>
