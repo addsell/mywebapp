@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Shop Manager</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(#6fb7d6,#b7e3b7);
+padding:15px;
+}
+
+/* TOP BAR */
+
+.topbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+font-size:22px;
+font-weight:bold;
+margin-bottom:10px;
+}
+
+.addBtn{
+color:#ffbf5e;
+cursor:pointer;
+}
+
+/* FORM */
+
+.formBox{
+display:none;
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+margin-bottom:20px;
+}
+
+.formBox input{
+width:100%;
+padding:14px;
+margin:8px 0;
+border-radius:8px;
+border:1px solid gray;
+font-size:16px;
+}
+
+.saveBtn{
+width:100%;
+padding:14px;
+font-size:18px;
+background:#3bb143;
+color:white;
+border:none;
+border-radius:10px;
+margin-top:10px;
+}
+
+/* SEARCH */
+
+.searchBox{
+margin-bottom:15px;
+}
+
+.searchBox input{
+width:100%;
+padding:12px;
+border-radius:8px;
+border:1px solid gray;
+}
+
+/* SHOP CARD */
+
+.shop{
+background:white;
+padding:15px;
+border-radius:12px;
+margin-bottom:12px;
+box-shadow:0 4px 10px rgba(0,0,0,0.15);
+}
+
+.shopName{
+font-size:18px;
+font-weight:bold;
+}
+
+.shop button{
+margin-top:8px;
+padding:7px 12px;
+border:none;
+border-radius:6px;
+}
+
+.edit{
+background:#ffc75f;
+}
+
+.delete{
+background:#ff5e5e;
+color:white;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+<div>Shop List</div>
+<div class="addBtn" onclick="toggleForm()">Add Shop</div>
+</div>
+
+<div class="formBox" id="form">
+
+<input type="text" id="name" placeholder="Shop Name">
+<input type="number" id="mobile" placeholder="Mobile Number">
+<input type="text" id="address" placeholder="Address">
+
+<button class="saveBtn" onclick="saveShop()">Save</button>
+
+</div>
+
+<div class="searchBox">
+<input type="text" id="search" placeholder="Search Shop..." onkeyup="searchShop()">
+</div>
+
+<div id="shopList"></div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+getDocs,
+deleteDoc,
+doc,
+updateDoc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import {
+getAuth,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let userId=null
+let shopData=[]
+let editId=null
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId=user.uid
+loadShop()
+
+}else{
+
+window.location="login.html"
+
+}
+
+})
+
+
+window.toggleForm=function(){
+
+let f=document.getElementById("form")
+
+if(f.style.display==="block"){
+
+f.style.display="none"
+
+}else{
+
+f.style.display="block"
+window.scrollTo({top:0,behavior:"smooth"})
+
+}
+
+}
+
+
+
+window.saveShop=async function(){
+
+let name=document.getElementById("name").value
+let mobile=document.getElementById("mobile").value
+let address=document.getElementById("address").value
+
+if(name==""||mobile==""||address==""){
+
+alert("Fill all fields")
+return
+
+}
+
+if(editId){
+
+await updateDoc(doc(db,"users",userId,"shops",editId),{
+
+name:name,
+mobile:mobile,
+address:address
+
+})
+
+alert("Shop Updated")
+
+}else{
+
+await addDoc(collection(db,"users",userId,"shops"),{
+
+name:name,
+mobile:mobile,
+address:address
+
+})
+
+alert("Shop Added")
+
+}
+
+location.reload()
+
+}
+
+
+
+window.deleteShop=async function(id){
+
+if(confirm("Delete shop?")){
+
+await deleteDoc(doc(db,"users",userId,"shops",id))
+
+location.reload()
+
+}
+
+}
+
+
+
+window.editShop=function(id){
+
+let shop=shopData.find(s=>s.id===id)
+
+document.getElementById("name").value=shop.name
+document.getElementById("mobile").value=shop.mobile
+document.getElementById("address").value=shop.address
+
+editId=id
+
+toggleForm()
+
+}
+
+
+
+window.searchShop=function(){
+
+let text=document.getElementById("search").value.toLowerCase()
+
+let filtered=shopData.filter(s=>s.name.toLowerCase().includes(text))
+
+displayShop(filtered)
+
+}
+
+
+
+function displayShop(data){
+
+document.getElementById("shopList").innerHTML=""
+
+data.forEach(shop=>{
+
+let div=document.createElement("div")
+
+div.className="shop"
+
+div.innerHTML=`
+
+<div class="shopName">${shop.name}</div>
+
+📞 ${shop.mobile}<br>
+
+📍 ${shop.address}<br>
+
+<button class="edit" onclick="editShop('${shop.id}')">Edit</button>
+
+<button class="delete" onclick="deleteShop('${shop.id}')">Delete</button>
+
+`
+
+document.getElementById("shopList").appendChild(div)
+
+})
+
+}
+
+
+
+async function loadShop(){
+
+shopData=[]
+
+const querySnapshot=await getDocs(collection(db,"users",userId,"shops"))
+
+querySnapshot.forEach((docu)=>{
+
+let d=docu.data()
+
+shopData.push({
+
+id:docu.id,
+name:d.name,
+mobile:d.mobile,
+address:d.address
+
+})
+
+})
+
+displayShop(shopData)
+
+}
+
+</script>
+
+</body>
+</html>
