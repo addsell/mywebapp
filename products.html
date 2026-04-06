@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Products Manager</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f4f6f9;
+margin:0;
+}
+
+header{
+background:#2c3e50;
+color:white;
+padding:15px;
+font-size:20px;
+}
+
+.container{
+padding:20px;
+}
+
+input,select{
+padding:8px;
+margin:5px;
+}
+
+button{
+padding:8px 12px;
+background:#3498db;
+border:none;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#2980b9;
+}
+
+table{
+width:100%;
+margin-top:20px;
+border-collapse:collapse;
+background:white;
+}
+
+table th,table td{
+padding:10px;
+border:1px solid #ddd;
+text-align:center;
+}
+
+.lowStock{
+background:#ffcccc;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+📦 Product Management
+</header>
+
+<div class="container">
+
+<h3>Add Product</h3>
+
+<input id="name" placeholder="Product Name">
+<input id="price" type="number" placeholder="Price">
+<input id="stock" type="number" placeholder="Stock">
+
+<select id="category">
+<option value="General">General</option>
+<option value="Electronics">Electronics</option>
+<option value="Fashion">Fashion</option>
+</select>
+
+<button onclick="addProduct()">Add Product</button>
+
+<hr>
+
+<h3>Search</h3>
+
+<input id="search" placeholder="Search product" onkeyup="searchProduct()">
+
+<h3>Products</h3>
+
+<table>
+
+<thead>
+<tr>
+<th>Name</th>
+<th>Price</th>
+<th>Stock</th>
+<th>Category</th>
+<th>Action</th>
+</tr>
+</thead>
+
+<tbody id="productTable"></tbody>
+
+</table>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+getFirestore,
+collection,
+addDoc,
+getDocs,
+deleteDoc,
+doc,
+updateDoc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+measurementId: "G-BHD1Z4TD7G"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const table = document.getElementById("productTable");
+
+async function addProduct(){
+
+const name=document.getElementById("name").value;
+const price=document.getElementById("price").value;
+const stock=document.getElementById("stock").value;
+const category=document.getElementById("category").value;
+
+if(name=="") return alert("Enter product name");
+
+await addDoc(collection(db,"products"),{
+name:name,
+price:Number(price),
+stock:Number(stock),
+category:category
+});
+
+loadProducts();
+
+}
+
+async function loadProducts(){
+
+table.innerHTML="";
+
+const querySnapshot = await getDocs(collection(db,"products"));
+
+querySnapshot.forEach((docData)=>{
+
+const data=docData.data();
+
+let row=`
+<tr class="${data.stock<=5 ? 'lowStock':''}">
+<td>${data.name}</td>
+<td>${data.price}</td>
+<td>${data.stock}</td>
+<td>${data.category}</td>
+<td>
+<button onclick="deleteProduct('${docData.id}')">Delete</button>
+<button onclick="editProduct('${docData.id}',${data.stock})">Stock +1</button>
+</td>
+</tr>
+`;
+
+table.innerHTML+=row;
+
+});
+
+}
+
+window.deleteProduct = async function(id){
+
+await deleteDoc(doc(db,"products",id));
+loadProducts();
+
+}
+
+window.editProduct = async function(id,stock){
+
+await updateDoc(doc(db,"products",id),{
+stock:stock+1
+});
+
+loadProducts();
+
+}
+
+window.searchProduct=function(){
+
+let input=document.getElementById("search").value.toLowerCase();
+
+let rows=table.getElementsByTagName("tr");
+
+for(let i=0;i<rows.length;i++){
+
+let text=rows[i].innerText.toLowerCase();
+
+rows[i].style.display=text.includes(input)?"":"none";
+
+}
+
+}
+
+loadProducts();
+
+</script>
+
+</body>
+</html>
