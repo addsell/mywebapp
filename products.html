@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Products</title>
+
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:linear-gradient(180deg,#5ba6c9,#9ed3a0);
+}
+
+/* HEADER */
+
+.header{
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+padding:20px;
+
+font-size:26px;
+font-weight:bold;
+
+}
+
+.addBtn{
+
+color:#ffb74d;
+cursor:pointer;
+
+}
+
+/* SEARCH */
+
+.searchBox{
+
+margin:15px;
+
+background:#7ed08d;
+
+padding:15px;
+
+border-radius:40px;
+
+display:flex;
+align-items:center;
+gap:10px;
+
+}
+
+.searchBox input{
+
+border:none;
+background:none;
+outline:none;
+font-size:18px;
+width:100%;
+
+}
+
+/* PRODUCT LIST */
+
+.container{
+
+padding:10px;
+
+}
+
+/* PRODUCT CARD */
+
+.product{
+
+background:linear-gradient(90deg,#7f5af0,#00c16e);
+
+border-radius:30px;
+
+padding:15px;
+
+margin-bottom:20px;
+
+display:flex;
+
+gap:15px;
+
+align-items:center;
+
+color:black;
+
+}
+
+.product img{
+
+width:90px;
+height:120px;
+
+background:white;
+
+border-radius:10px;
+
+object-fit:cover;
+
+cursor:pointer;
+
+}
+
+.left{
+
+text-align:center;
+width:110px;
+
+}
+
+.tap{
+
+font-size:12px;
+font-weight:bold;
+
+}
+
+.center{
+
+flex:1;
+
+}
+
+.name{
+
+font-size:22px;
+font-weight:bold;
+
+margin-bottom:6px;
+
+}
+
+.right{
+
+font-size:16px;
+
+width:160px;
+
+}
+
+.actions{
+
+margin-top:10px;
+
+}
+
+.actions span{
+
+margin-right:15px;
+font-weight:bold;
+cursor:pointer;
+
+}
+
+/* ADD PRODUCT MODAL */
+
+.modal{
+
+position:fixed;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.5);
+
+display:none;
+
+justify-content:center;
+align-items:center;
+
+}
+
+.modalContent{
+
+background:white;
+
+padding:20px;
+
+border-radius:20px;
+
+width:90%;
+max-width:400px;
+
+}
+
+.modalContent h2{
+
+text-align:center;
+
+}
+
+.modalContent input{
+
+width:100%;
+
+padding:12px;
+
+margin-top:10px;
+
+border-radius:10px;
+
+border:none;
+
+background:#eee;
+
+}
+
+.saveBtn{
+
+margin-top:15px;
+
+width:100%;
+
+padding:12px;
+
+border:none;
+
+background:#ffb74d;
+
+border-radius:10px;
+
+font-size:18px;
+
+}
+
+</style>
+
+</head>
+
+
+
+<body>
+
+<div class="header">
+
+<div>Products List</div>
+
+<div class="addBtn" onclick="openModal()">+ Add Products</div>
+
+</div>
+
+
+
+<div class="searchBox">
+
+🔍
+
+<input id="search" placeholder="Search Name / Code / Category" onkeyup="searchProduct()">
+
+</div>
+
+
+
+<div class="container" id="productList"></div>
+
+
+
+<!-- ADD PRODUCT -->
+
+<div class="modal" id="modal">
+
+<div class="modalContent">
+
+<h2>Add Product</h2>
+
+<input type="file" id="image">
+
+<input id="name" placeholder="Product Name">
+
+<input id="code" placeholder="Product Code">
+
+<input id="category" placeholder="Category">
+
+<input id="stock" type="number" placeholder="Stock">
+
+<input id="mrp" type="number" placeholder="MRP">
+
+<input id="price" type="number" placeholder="Selling Price">
+
+<button class="saveBtn" onclick="addProduct()">Save</button>
+
+</div>
+
+</div>
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import { getStorage,ref,uploadBytes,getDownloadURL } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+
+const firebaseConfig = {
+
+apiKey: "YOUR KEY",
+
+authDomain: "YOUR DOMAIN",
+
+projectId: "YOUR PROJECT",
+
+storageBucket: "YOUR BUCKET",
+
+messagingSenderId: "ID",
+
+appId: "APP ID"
+
+};
+
+
+
+const app=initializeApp(firebaseConfig);
+
+const auth=getAuth(app);
+
+const db=getFirestore(app);
+
+const storage=getStorage(app);
+
+
+
+let userId="";
+
+
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+
+userId=user.uid;
+
+loadProducts();
+
+}else{
+
+location="login.html";
+
+}
+
+});
+
+
+
+window.openModal=function(){
+
+document.getElementById("modal").style.display="flex";
+
+}
+
+
+
+/* ADD PRODUCT */
+
+window.addProduct=async function(){
+
+const name=nameInput.value;
+
+const code=codeInput.value;
+
+const category=categoryInput.value;
+
+const stock=stockInput.value;
+
+const mrp=mrpInput.value;
+
+const price=priceInput.value;
+
+const file=image.files[0];
+
+
+
+let imageUrl="";
+
+
+
+if(file){
+
+const storageRef=ref(storage,"products/"+Date.now()+file.name);
+
+await uploadBytes(storageRef,file);
+
+imageUrl=await getDownloadURL(storageRef);
+
+}
+
+
+
+await addDoc(collection(db,"users",userId,"products"),{
+
+name,code,category,stock,mrp,price,image:imageUrl
+
+});
+
+
+
+alert("Product Added");
+
+modal.style.display="none";
+
+loadProducts();
+
+}
+
+
+
+/* LOAD PRODUCTS */
+
+async function loadProducts(){
+
+productList.innerHTML="";
+
+
+
+const snap=await getDocs(collection(db,"users",userId,"products"));
+
+
+
+snap.forEach((docSnap)=>{
+
+const d=docSnap.data();
+
+
+
+productList.innerHTML+=`
+
+<div class="product">
+
+<div class="left">
+
+<img src="${d.image}" onclick="window.open('${d.image}')">
+
+<div class="tap">Tap to image full view</div>
+
+</div>
+
+
+
+<div class="center">
+
+<div class="name">${d.name}</div>
+
+<div>M.R.P: ${d.mrp}৳ Sell Rate: ${d.price}৳</div>
+
+</div>
+
+
+
+<div class="right">
+
+<div>Code: ${d.code}</div>
+
+<div>Category: ${d.category}</div>
+
+<div>Stock: ${d.stock}</div>
+
+<div class="actions">
+
+<span onclick="deleteProduct('${docSnap.id}')">Delete</span>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+
+
+});
+
+}
+
+
+
+/* DELETE */
+
+window.deleteProduct=async function(id){
+
+await deleteDoc(doc(db,"users",userId,"products",id));
+
+loadProducts();
+
+}
+
+
+
+/* SEARCH */
+
+window.searchProduct=function(){
+
+let input=search.value.toLowerCase();
+
+let items=document.getElementsByClassName("product");
+
+
+
+for(let i=0;i<items.length;i++){
+
+let txt=items[i].innerText.toLowerCase();
+
+items[i].style.display=txt.includes(input)?"flex":"none";
+
+}
+
+}
+
+</script>
+
+</body>
+
+</html>
