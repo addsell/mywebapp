@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Add Product</title>
+
+<style>
+
+body{
+margin:0;
+font-family:arial;
+background:#cfe8cf;
+}
+
+.header{
+
+background:linear-gradient(90deg,#2f6f8f,#3f7c92);
+padding:15px;
+color:white;
+display:flex;
+gap:20px;
+font-weight:bold;
+
+}
+
+.header a{
+color:black;
+text-decoration:none;
+font-size:18px;
+}
+
+.title{
+margin-left:auto;
+color:#ffc36c;
+font-size:26px;
+font-weight:bold;
+}
+
+.container{
+padding:25px;
+}
+
+label{
+
+font-size:22px;
+display:block;
+margin-top:20px;
+
+}
+
+input,select{
+
+width:100%;
+padding:12px;
+margin-top:8px;
+border-radius:6px;
+border:1px solid #ccc;
+
+}
+
+.row{
+
+display:flex;
+gap:15px;
+
+}
+
+.row input{
+
+flex:1;
+
+}
+
+button{
+
+margin-top:25px;
+padding:15px;
+width:100%;
+border:none;
+background:#1e7b34;
+color:white;
+font-size:18px;
+border-radius:6px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">
+
+<a href="products.html">Products List</a>
+
+<a href="lowstock.html">Low Stock</a>
+
+<a href="category.html">Add Category</a>
+
+<div class="title">Add Products</div>
+
+</div>
+
+
+<div class="container">
+
+<label>Upload Photos</label>
+
+<input type="file" id="image">
+
+<label>Product Name</label>
+
+<input type="text" id="name">
+
+<label>Product Code</label>
+
+<input type="text" id="code">
+
+<label>Select Category</label>
+
+<select id="category"></select>
+
+<label>Total Stock</label>
+
+<input type="number" id="stock">
+
+<div class="row">
+
+<div>
+
+<label>Purchase Price</label>
+
+<input type="number" id="purchase">
+
+</div>
+
+<div>
+
+<label>Selling Price</label>
+
+<input type="number" id="sell">
+
+</div>
+
+<div>
+
+<label>M.R.P</label>
+
+<input type="number" id="mrp">
+
+</div>
+
+</div>
+
+<label>Low Stock Alert Piece</label>
+
+<input type="number" id="alert">
+
+<button onclick="saveProduct()">Save Product</button>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js";
+
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain: "mywebapp-93636.firebaseapp.com",
+
+projectId: "mywebapp-93636",
+
+storageBucket: "mywebapp-93636.firebasestorage.app",
+
+messagingSenderId: "644012557966",
+
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+
+measurementId: "G-BHD1Z4TD7G"
+
+};
+
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+const storage = getStorage(app);
+
+
+
+async function loadCategory(){
+
+let select=document.getElementById("category")
+
+let snapshot=await getDocs(collection(db,"category"))
+
+snapshot.forEach((doc)=>{
+
+let data=doc.data()
+
+let option=document.createElement("option")
+
+option.value=data.name
+
+option.innerText=data.name
+
+select.appendChild(option)
+
+})
+
+}
+
+loadCategory()
+
+
+
+window.saveProduct=async function(){
+
+let name=document.getElementById("name").value
+
+let code=document.getElementById("code").value
+
+let category=document.getElementById("category").value
+
+let stock=document.getElementById("stock").value
+
+let purchase=document.getElementById("purchase").value
+
+let sell=document.getElementById("sell").value
+
+let mrp=document.getElementById("mrp").value
+
+let alert=document.getElementById("alert").value
+
+let file=document.getElementById("image").files[0]
+
+
+let imageUrl=""
+
+if(file){
+
+let storageRef=ref(storage,"products/"+file.name)
+
+await uploadBytes(storageRef,file)
+
+imageUrl=await getDownloadURL(storageRef)
+
+}
+
+
+
+await addDoc(collection(db,"products"),{
+
+name:name,
+
+code:code,
+
+category:category,
+
+stock:stock,
+
+purchase:purchase,
+
+sell:sell,
+
+mrp:mrp,
+
+alert:alert,
+
+image:imageUrl
+
+})
+
+
+
+alert("Product Saved")
+
+location.reload()
+
+}
+
+</script>
+
+
+</body>
+
+</html>
