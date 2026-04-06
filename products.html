@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Products</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+background:linear-gradient(#4da3c7,#b5e0b3);
+}
+
+.topbar{
+display:flex;
+justify-content:space-between;
+padding:15px;
+font-size:22px;
+font-weight:bold;
+}
+
+.addbtn{
+color:#ffcc66;
+cursor:pointer;
+}
+
+.container{
+padding:10px;
+}
+
+.search{
+background:#7ed37a;
+padding:12px;
+border-radius:40px;
+margin-bottom:15px;
+}
+
+.search input{
+border:none;
+background:transparent;
+width:90%;
+font-size:16px;
+outline:none;
+}
+
+.card{
+display:flex;
+background:linear-gradient(90deg,#7d4cff,#0ecf83);
+border-radius:20px;
+padding:10px;
+margin-bottom:15px;
+color:black;
+}
+
+.card img{
+width:70px;
+height:90px;
+border-radius:10px;
+background:white;
+}
+
+.info{
+flex:1;
+margin-left:10px;
+}
+
+.action{
+margin-top:5px;
+}
+
+.action button{
+border:none;
+background:none;
+font-size:16px;
+margin-right:10px;
+cursor:pointer;
+}
+
+.formbox{
+display:none;
+padding:15px;
+}
+
+.formbox input{
+width:100%;
+padding:10px;
+margin:6px 0;
+border-radius:30px;
+border:none;
+background:linear-gradient(90deg,#7d4cff,#0ecf83);
+color:black;
+}
+
+.savebtn{
+margin-top:10px;
+padding:12px;
+background:#f4a94a;
+border:none;
+border-radius:30px;
+font-size:18px;
+width:100%;
+}
+
+.preview{
+width:120px;
+height:120px;
+background:#aaa;
+border-radius:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+margin-bottom:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+<div>Products List</div>
+<div class="addbtn" onclick="showForm()">+ Add Products</div>
+</div>
+
+<div class="container">
+
+<div class="search">
+<input id="search" placeholder="Search Name/Code/Category">
+</div>
+
+<div id="productList"></div>
+
+</div>
+
+
+<div class="formbox" id="formbox">
+
+<h2 style="text-align:center;color:#ffcc66">Add Products</h2>
+
+<div class="preview" onclick="upload.click()">
+Click to upload photo
+</div>
+
+<input type="file" id="upload">
+
+<input id="name" placeholder="Product Name">
+<input id="code" placeholder="Product Code">
+<input id="category" placeholder="Category Name">
+<input id="stock" placeholder="Total Stock">
+<input id="purchase" placeholder="Purchase Price">
+<input id="sell" placeholder="Selling Price">
+<input id="mrp" placeholder="MRP">
+
+<button class="savebtn" onclick="saveProduct()">Save</button>
+
+</div>
+
+
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore,collection,addDoc,onSnapshot,deleteDoc,doc,updateDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const productList=document.getElementById("productList");
+
+
+
+window.showForm=()=>{
+document.getElementById("formbox").style.display="block";
+window.scrollTo(0,document.body.scrollHeight);
+}
+
+
+window.saveProduct=async()=>{
+
+let data={
+name:document.getElementById("name").value,
+code:document.getElementById("code").value,
+category:document.getElementById("category").value,
+stock:document.getElementById("stock").value,
+purchase:document.getElementById("purchase").value,
+sell:document.getElementById("sell").value,
+mrp:document.getElementById("mrp").value,
+image:""
+}
+
+await addDoc(collection(db,"products"),data)
+
+alert("Product Added")
+
+}
+
+
+
+onSnapshot(collection(db,"products"),(snap)=>{
+
+productList.innerHTML=""
+
+snap.forEach(docu=>{
+
+let d=docu.data()
+
+productList.innerHTML+=`
+
+<div class="card">
+
+<img src="${d.image||'https://via.placeholder.com/70'}" onclick="viewImage('${d.image}')">
+
+<div class="info">
+
+<b>${d.name}</b><br>
+
+M.R.P ${d.mrp} | Sell ${d.sell}
+
+<div class="action">
+
+Code: ${d.code}<br>
+Category: ${d.category}<br>
+Stock: ${d.stock}
+
+<br>
+
+<button onclick="editProduct('${docu.id}')">Edit</button>
+
+<button onclick="deleteProduct('${docu.id}')">Delete</button>
+
+</div>
+
+</div>
+
+</div>
+
+`
+
+})
+
+})
+
+
+
+window.deleteProduct=async(id)=>{
+
+await deleteDoc(doc(db,"products",id))
+
+}
+
+
+
+window.editProduct=async(id)=>{
+
+let name=prompt("New Name")
+
+await updateDoc(doc(db,"products",id),{
+name:name
+})
+
+}
+
+
+window.viewImage=(img)=>{
+
+if(!img)return
+
+window.open(img)
+
+}
+
+
+
+</script>
+
+</body>
+</html>
