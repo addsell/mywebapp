@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Sell Report</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f5f5f5;
+margin:0;
+}
+
+.header{
+background:white;
+padding:15px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+display:flex;
+justify-content:space-between;
+}
+
+.table{
+padding:10px;
+}
+
+table{
+width:100%;
+background:white;
+border-collapse:collapse;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #ddd;
+text-align:center;
+}
+
+.totalBox{
+background:white;
+margin:10px;
+padding:15px;
+font-size:18px;
+box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<h2>Sell Report</h2>
+<a href="sells.html">Sell Page</a>
+</div>
+
+<div class="totalBox">
+Total Sales : <span id="totalSales">0</span>
+</div>
+
+<div class="table">
+
+<table>
+
+<thead>
+
+<tr>
+<th>Product</th>
+<th>Price</th>
+<th>Qty</th>
+<th>Total</th>
+<th>Date</th>
+</tr>
+
+</thead>
+
+<tbody id="reportList"></tbody>
+
+</table>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app=initializeApp(firebaseConfig);
+
+const db=getFirestore(app);
+const auth=getAuth(app);
+
+let userId=null;
+
+onAuthStateChanged(auth,(user)=>{
+
+if(user){
+userId=user.uid;
+loadReport();
+}
+
+});
+
+async function loadReport(){
+
+const snap=await getDocs(collection(db,"users",userId,"sales"));
+
+const list=document.getElementById("reportList");
+
+let totalSales=0;
+
+list.innerHTML="";
+
+snap.forEach((docu)=>{
+
+const s=docu.data();
+
+totalSales+=Number(s.total);
+
+list.innerHTML+=`
+
+<tr>
+
+<td>${s.name}</td>
+
+<td>${s.price}</td>
+
+<td>${s.qty}</td>
+
+<td>${s.total}</td>
+
+<td>${s.date}</td>
+
+</tr>
+
+`;
+
+});
+
+document.getElementById("totalSales").innerText=totalSales;
+
+}
+
+</script>
+
+</body>
+</html>
