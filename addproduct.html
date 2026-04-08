@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Add Product</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+background:#e9f5e6;
+}
+
+.header{
+text-align:center;
+font-size:24px;
+font-weight:bold;
+color:#f4a742;
+padding:15px;
+}
+
+.container{
+padding:15px;
+max-width:420px;
+margin:auto;
+}
+
+.upload{
+width:110px;
+height:110px;
+background:#ccc;
+border-radius:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+text-align:center;
+cursor:pointer;
+margin:auto;
+overflow:hidden;
+}
+
+.upload img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.upload input{
+display:none;
+}
+
+input,select{
+
+width:90%;
+height:50px;
+
+padding:0 15px;
+
+border:none;
+border-radius:30px;
+
+margin-top:10px;
+
+background:linear-gradient(90deg,#7b4dff,#00b96b);
+
+color:red;
+
+display:block;
+margin-left:auto;
+margin-right:auto;
+
+}
+
+.price-row{
+display:flex;
+justify-content:center;
+gap:10px;
+margin-top:10px;
+}
+
+.price-row input{
+width:30%;
+height:45px;
+}
+
+.save{
+
+margin-top:25px;
+
+background:#f4a742;
+
+border:none;
+
+padding:12px 35px;
+
+border-radius:30px;
+
+font-size:16px;
+
+cursor:pointer;
+
+display:block;
+margin-left:auto;
+margin-right:auto;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="header">Add Products</div>
+
+<div class="container">
+
+<label class="upload">
+
+<img id="preview">
+
+<input type="file" id="photo" accept="image/*">
+
+Upload Photo
+
+</label>
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="text" id="code" placeholder="Product Code">
+
+<input type="text" id="category" placeholder="Category">
+
+<input type="number" id="stock" placeholder="Total Stock">
+
+<div class="price-row">
+
+<input type="number" id="purchase" placeholder="Purchase">
+
+<input type="number" id="sell" placeholder="Sell">
+
+<input type="number" id="mrp" placeholder="MRP">
+
+</div>
+
+<button class="save" onclick="saveProduct()">Save</button>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+
+getFirestore,
+collection,
+addDoc
+
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+
+authDomain: "mywebapp-93636.firebaseapp.com",
+
+projectId: "mywebapp-93636",
+
+storageBucket: "mywebapp-93636.appspot.com",
+
+messagingSenderId: "644012557966",
+
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+
+};
+
+const app = initializeApp(firebaseConfig);
+
+const db = getFirestore(app);
+
+let photoBase64="";
+
+/* image preview */
+
+document.getElementById("photo").addEventListener("change",function(){
+
+const file=this.files[0];
+
+const reader=new FileReader();
+
+reader.onload=function(e){
+
+photoBase64=e.target.result;
+
+document.getElementById("preview").src=photoBase64;
+
+}
+
+reader.readAsDataURL(file);
+
+});
+
+/* save product */
+
+window.saveProduct=async function(){
+
+const name=document.getElementById("name").value;
+
+const code=document.getElementById("code").value;
+
+const category=document.getElementById("category").value;
+
+const stock=document.getElementById("stock").value;
+
+const purchase=document.getElementById("purchase").value;
+
+const sell=document.getElementById("sell").value;
+
+const mrp=document.getElementById("mrp").value;
+
+if(name=="" || code==""){
+
+alert("Fill all fields");
+
+return;
+
+}
+
+await addDoc(collection(db,"products"),{
+
+name:name,
+code:code,
+category:category,
+stock:stock,
+purchase:purchase,
+sell:sell,
+mrp:mrp,
+photo:photoBase64,
+date:Date.now()
+
+});
+
+alert("Product Saved");
+
+document.getElementById("name").value="";
+document.getElementById("code").value="";
+document.getElementById("category").value="";
+document.getElementById("stock").value="";
+document.getElementById("purchase").value="";
+document.getElementById("sell").value="";
+document.getElementById("mrp").value="";
+document.getElementById("preview").src="";
+
+}
+
+</script>
+
+</body>
+
+</html>
