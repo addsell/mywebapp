@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Add Product</title>
+
+<style>
+
+body{
+font-family:Arial;
+margin:0;
+background:#e9f5e6;
+}
+
+.header{
+text-align:center;
+font-size:30px;
+font-weight:bold;
+color:#f4a742;
+padding:20px;
+}
+
+.container{
+padding:20px;
+}
+
+.upload{
+width:120px;
+height:120px;
+background:#ccc;
+border-radius:20px;
+display:flex;
+align-items:center;
+justify-content:center;
+text-align:center;
+cursor:pointer;
+}
+
+.upload input{
+display:none;
+}
+
+input,select{
+width:100%;
+padding:14px;
+border:none;
+border-radius:30px;
+margin-top:10px;
+background:linear-gradient(90deg,#7b4dff,#00b96b);
+color:white;
+font-size:16px;
+}
+
+.price-row{
+display:flex;
+gap:10px;
+}
+
+.price-row input{
+flex:1;
+}
+
+.save{
+margin-top:30px;
+background:#f4a742;
+border:none;
+padding:14px 40px;
+border-radius:30px;
+font-size:18px;
+cursor:pointer;
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="header">Add Products</div>
+
+<div class="container">
+
+<label class="upload">
+<input type="file" id="image">
+Click to upload photo
+</label>
+
+<input type="text" id="name" placeholder="Product Name">
+
+<input type="text" id="code" placeholder="Product Code">
+
+<select id="category">
+<option value="">Select Category</option>
+<option>Flask</option>
+<option>Electric</option>
+<option>Kitchen</option>
+</select>
+
+<input type="number" id="stock" placeholder="Total Stock Piece">
+
+<div class="price-row">
+<input type="number" id="purchase" placeholder="Purchase Price ৳">
+<input type="number" id="sell" placeholder="Selling Price ৳">
+<input type="number" id="mrp" placeholder="M.R.P ৳">
+</div>
+
+<button class="save" onclick="saveProduct()">Save</button>
+
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf",
+measurementId: "G-BHD1Z4TD7G"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+window.saveProduct = async function(){
+
+const name = document.getElementById("name").value;
+const code = document.getElementById("code").value;
+const category = document.getElementById("category").value;
+const stock = document.getElementById("stock").value;
+const purchase = document.getElementById("purchase").value;
+const sell = document.getElementById("sell").value;
+const mrp = document.getElementById("mrp").value;
+
+if(name==""){
+alert("Enter Product Name");
+return;
+}
+
+await addDoc(collection(db,"products"),{
+
+name:name,
+code:code,
+category:category,
+stock:stock,
+purchase:purchase,
+sell:sell,
+mrp:mrp,
+date:Date.now()
+
+});
+
+alert("Product Saved Successfully");
+
+location.href="products.html";
+
+}
+
+</script>
+
+</body>
+</html>
