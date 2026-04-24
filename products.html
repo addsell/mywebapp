@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product</title>
+
+<style>
+body{
+margin:0;
+font-family:sans-serif;
+background:linear-gradient(135deg,#c8e6c9,#a5d6a7);
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+padding:15px;
+font-size:20px;
+font-weight:bold;
+background:linear-gradient(90deg,#4ca1af,#2c3e50);
+color:#ffbf5e;
+}
+
+/* SEARCH */
+.search{
+margin:10px;
+background:#6edb6e;
+padding:12px;
+border-radius:30px;
+display:flex;
+}
+.search input{
+border:none;
+outline:none;
+background:none;
+width:100%;
+}
+
+/* CATEGORY */
+.catBox{
+display:flex;
+gap:10px;
+padding:10px;
+overflow:auto;
+}
+.cat{
+background:#6edb6e;
+padding:8px 15px;
+border-radius:20px;
+cursor:pointer;
+}
+
+/* CARD */
+.card{
+margin:10px;
+padding:12px;
+border-radius:20px;
+display:flex;
+gap:10px;
+background:linear-gradient(90deg,#7b4cff,#00c37a);
+color:white;
+}
+.card.low{
+border:3px solid red;
+}
+
+.card img{
+width:80px;
+height:90px;
+border-radius:10px;
+}
+
+.right{
+margin-left:auto;
+font-size:14px;
+}
+
+.btn{
+padding:5px 10px;
+border:none;
+border-radius:10px;
+margin-top:5px;
+}
+.edit{background:#ffe58f;}
+.delete{background:#ff8f8f;}
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+.form{
+background:white;
+padding:15px;
+border-radius:15px;
+width:90%;
+max-height:90%;
+overflow:auto;
+}
+
+/* INPUT */
+.form input,select{
+width:100%;
+padding:10px;
+margin:5px 0;
+border:none;
+border-radius:20px;
+background:#f5b55c;
+}
+
+/* CATEGORY LIST */
+.catItem{
+display:flex;
+justify-content:space-between;
+background:#f5b55c;
+padding:8px;
+margin:5px 0;
+border-radius:20px;
+}
+.catItem button{
+background:red;
+color:white;
+border:none;
+border-radius:10px;
+}
+
+/* IMAGE VIEW */
+#imgView{
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:black;
+display:none;
+justify-content:center;
+align-items:center;
+}
+#imgView img{
+max-width:90%;
+max-height:90%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products</div>
+<div onclick="openForm()">+ Add</div>
+</div>
+
+<div class="search">
+🔍 <input id="search" placeholder="Search...">
+</div>
+
+<div class="catBox" id="catBox"></div>
+
+<div id="list"></div>
+
+<!-- FORM -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h2>Add Product</h2>
+
+<img id="preview" width="80">
+<input type="file" id="imageFile">
+
+<input id="name" placeholder="Name">
+<select id="category"></select>
+
+<input id="code" placeholder="Code">
+<input id="stock" placeholder="Stock">
+<input id="low" placeholder="Low Stock Alert">
+
+<input id="buy" placeholder="Buy Price">
+<input id="sell" placeholder="Sell Price">
+<input id="mrp" placeholder="MRP">
+
+<h3>Category</h3>
+<input id="newCat" placeholder="New Category">
+<button onclick="addCategory()">Add Category</button>
+
+<div id="catList"></div>
+
+<br>
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<!-- IMAGE VIEW -->
+<div id="imgView" onclick="this.style.display='none'">
+<img id="fullImg">
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+deleteDoc, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import {
+getStorage, ref, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-storage.js";
+
+/* 🔥 YOUR CONFIG */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.appspot.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+let products=[];
+let categories=["All"];
+let editId=null;
+let currentFilter="All";
+
+/* REALTIME LOAD */
+onSnapshot(collection(db,"products"),snap=>{
+products=[];
+snap.forEach(d=>{
+products.push({id:d.id,...d.data()});
+});
+render();
+});
+
+/* RENDER */
+function render(){
+list.innerHTML="";
+
+let data = currentFilter=="All"
+? products
+: products.filter(p=>p.category==currentFilter);
+
+data.forEach(p=>{
+let lowClass = p.stock <= p.low ? "low" : "";
+
+list.innerHTML+=`
+<div class="card ${lowClass}">
+<img src="${p.image}" onclick="viewImg('${p.image}')">
+
+<div>
+<b>${p.name}</b><br>
+MRP: ${p.mrp} | Sell: ${p.sell}
+</div>
+
+<div class="right">
+Code: ${p.code}<br>
+Category: ${p.category}<br>
+Stock: ${p.stock}<br>
+
+<button class="btn edit" onclick="edit('${p.id}')">Edit</button>
+<button class="btn delete" onclick="del('${p.id}')">Delete</button>
+</div>
+</div>`;
+});
+}
+
+/* SAVE FIXED */
+window.save = async function(){
+
+try{
+
+if(
+!name.value.trim() ||
+!code.value.trim() ||
+!category.value ||
+!stock.value ||
+!low.value ||
+!buy.value ||
+!sell.value ||
+!mrp.value
+){
+alert("সব ফিল্ড পূরণ করো");
+return;
+}
+
+let imageUrl = preview.src;
+
+/* upload image */
+if(imageFile.files[0]){
+let file=imageFile.files[0];
+let storageRef = ref(storage,"products/"+Date.now());
+await uploadBytes(storageRef,file);
+imageUrl = await getDownloadURL(storageRef);
+}
+
+/* new হলে image must */
+if(!imageUrl){
+alert("ছবি লাগবে");
+return;
+}
+
+let data={
+name:name.value.trim(),
+code:code.value.trim(),
+category:category.value,
+stock:Number(stock.value),
+low:Number(low.value),
+buy:Number(buy.value),
+sell:Number(sell.value),
+mrp:Number(mrp.value),
+image:imageUrl
+};
+
+if(editId){
+await updateDoc(doc(db,"products",editId),data);
+}else{
+await addDoc(collection(db,"products"),data);
+}
+
+alert("Saved ✅");
+closeForm();
+
+}catch(e){
+alert("Error: "+e.message);
+}
+
+};
+
+/* DELETE */
+window.del = async id=>{
+await deleteDoc(doc(db,"products",id));
+};
+
+/* EDIT */
+window.edit = id=>{
+let p=products.find(x=>x.id==id);
+editId=id;
+
+name.value=p.name;
+code.value=p.code;
+category.value=p.category;
+stock.value=p.stock;
+low.value=p.low;
+buy.value=p.buy;
+sell.value=p.sell;
+mrp.value=p.mrp;
+preview.src=p.image;
+
+openForm();
+};
+
+/* CATEGORY */
+function renderCategories(){
+catBox.innerHTML="";
+categories.forEach(c=>{
+catBox.innerHTML+=`<div class="cat" onclick="filterCat('${c}')">${c}</div>`;
+});
+
+category.innerHTML="";
+categories.filter(c=>c!="All").forEach(c=>{
+category.innerHTML+=`<option>${c}</option>`;
+});
+
+renderCatList();
+}
+
+function renderCatList(){
+catList.innerHTML="";
+categories.filter(c=>c!="All").forEach(c=>{
+catList.innerHTML+=`
+<div class="catItem">
+${c}
+<button onclick="deleteCategory('${c}')">Delete</button>
+</div>`;
+});
+}
+
+window.addCategory=function(){
+let c=newCat.value.trim();
+if(c && !categories.includes(c)){
+categories.push(c);
+renderCategories();
+}
+newCat.value="";
+};
+
+window.deleteCategory=function(c){
+let used = products.some(p=>p.category===c);
+if(used){
+alert("এই ক্যাটাগরিতে প্রোডাক্ট আছে ❌");
+return;
+}
+categories=categories.filter(x=>x!==c);
+renderCategories();
+};
+
+window.filterCat=function(c){
+currentFilter=c;
+render();
+};
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+let data=products.filter(p=>
+p.name.toLowerCase().includes(v) ||
+p.code.includes(v)
+);
+list.innerHTML="";
+data.forEach(p=>{
+list.innerHTML+=`<div class="card">${p.name}</div>`;
+});
+};
+
+/* IMAGE */
+imageFile.onchange=function(){
+let file=this.files[0];
+let reader=new FileReader();
+reader.onload=()=>preview.src=reader.result;
+reader.readAsDataURL(file);
+};
+
+window.viewImg=src=>{
+fullImg.src=src;
+imgView.style.display="flex";
+};
+
+/* MODAL */
+window.openForm=()=>{
+modal.style.display="flex";
+editId=null;
+};
+
+window.closeForm=()=>{
+modal.style.display="none";
+};
+
+/* INIT */
+renderCategories();
+
+</script>
+
+</body>
+</html>
