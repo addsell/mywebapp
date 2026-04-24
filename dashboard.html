@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>User Dashboard</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, sans-serif;
+}
+
+body{
+background:#dff0d8;
+min-height:100vh;
+}
+
+/* Top Header */
+.topbar{
+width:100%;
+padding:18px;
+text-align:center;
+font-size:28px;
+font-weight:bold;
+color:white;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+}
+
+/* Welcome Box */
+.welcome{
+text-align:center;
+padding:15px;
+font-size:20px;
+font-weight:bold;
+color:#2b5b00;
+}
+
+/* Grid */
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:14px;
+padding:14px;
+}
+
+/* Card */
+.card{
+background:linear-gradient(180deg,#7ea8b7,#173a57);
+border-radius:28px;
+padding:18px 10px;
+text-align:center;
+color:#8be000;
+font-size:18px;
+font-weight:bold;
+box-shadow:0 6px 15px rgba(0,0,0,0.25);
+cursor:pointer;
+transition:0.3s;
+min-height:135px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+}
+
+.card:hover{
+transform:scale(1.05);
+}
+
+.icon{
+font-size:42px;
+margin-bottom:10px;
+}
+
+/* Logout */
+.logout-box{
+margin:20px;
+text-align:center;
+}
+
+.logout-btn{
+background:#3f9918;
+color:white;
+border:none;
+padding:14px 35px;
+font-size:18px;
+border-radius:14px;
+cursor:pointer;
+}
+
+/* Footer */
+.footer{
+text-align:center;
+padding:25px 10px;
+font-size:22px;
+font-weight:bold;
+color:#78b800;
+}
+
+/* Mobile */
+@media(max-width:600px){
+
+.grid{
+grid-template-columns:repeat(2,1fr);
+}
+
+.card{
+font-size:16px;
+min-height:120px;
+}
+
+.icon{
+font-size:34px;
+}
+
+}
+
+</style>
+
+</head>
+<body>
+
+<div class="topbar">My Dashboard</div>
+
+<div class="welcome" id="welcomeText">Welcome...</div>
+
+<div class="grid">
+
+<div class="card" onclick="go('outlet.html')">
+<div class="icon">🏢</div>
+TOTAL OUTLET
+</div>
+
+<div class="card" onclick="go('products.html')">
+<div class="icon">📦</div>
+All Products
+</div>
+
+<div class="card" onclick="go('stock.html')">
+<div class="icon">📊</div>
+Stock
+</div>
+
+<div class="card" onclick="go('sale.html')">
+<div class="icon">💰</div>
+Sale
+</div>
+
+<div class="card" onclick="go('sales-report.html')">
+<div class="icon">📈</div>
+Sales Report
+</div>
+
+<div class="card" onclick="go('due-report.html')">
+<div class="icon">🧾</div>
+Due Reports
+</div>
+
+<div class="card" onclick="go('note.html')">
+<div class="icon">📝</div>
+Note
+</div>
+
+<div class="card" onclick="go('summary.html')">
+<div class="icon">📋</div>
+Own Summary
+</div>
+
+<div class="card" onclick="go('profile.html')">
+<div class="icon">👤</div>
+Profile
+</div>
+
+</div>
+
+<div class="logout-box">
+<button class="logout-btn" onclick="logout()">LOGOUT</button>
+</div>
+
+<div class="footer">
+A good sales representative keeps track of all activities.
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+getAuth,
+onAuthStateChanged,
+signOut
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import {
+getFirestore,
+doc,
+getDoc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.appspot.com",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* USER CHECK */
+
+onAuthStateChanged(auth, async(user)=>{
+
+if(user){
+
+const uid = user.uid;
+
+/* Every user own dashboard */
+const ref = doc(db,"users",uid);
+const snap = await getDoc(ref);
+
+if(snap.exists()){
+
+const data = snap.data();
+
+document.getElementById("welcomeText").innerHTML =
+"Welcome, " + data.name;
+
+}else{
+
+document.getElementById("welcomeText").innerHTML =
+"Welcome User";
+
+}
+
+}else{
+
+window.location.href="login.html";
+
+}
+
+});
+
+
+/* page go */
+window.go=function(page){
+window.location.href=page;
+}
+
+/* logout */
+window.logout=function(){
+
+signOut(auth).then(()=>{
+window.location.href="login.html";
+});
+
+}
+
+</script>
+
+</body>
+</html>
