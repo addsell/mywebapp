@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:linear-gradient(#cfe9c8,#eaf6e3);
+margin:0;
+padding:10px;
+}
+
+/* header */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+padding:15px;
+color:#ffbf5e;
+font-size:24px;
+border-radius:10px;
+}
+
+/* search */
+.search{
+margin:15px 0;
+display:flex;
+gap:10px;
+}
+
+.search input{
+flex:1;
+padding:12px;
+border-radius:20px;
+border:none;
+}
+
+/* product card */
+.card{
+display:flex;
+gap:15px;
+background:linear-gradient(90deg,#7b4cff,#00c37a);
+padding:15px;
+border-radius:20px;
+margin:15px 0;
+color:#000;
+align-items:center;
+}
+
+/* image */
+.card img{
+width:80px;
+height:100px;
+object-fit:cover;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* details */
+.details{
+flex:1;
+}
+
+.title{
+font-size:22px;
+font-weight:bold;
+}
+
+.price{
+margin-top:8px;
+}
+
+/* right */
+.right{
+text-align:right;
+}
+
+.btn{
+margin-top:10px;
+cursor:pointer;
+margin-left:10px;
+}
+
+/* modal */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:#fff;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:400px;
+}
+
+.form input{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+
+button{
+padding:10px;
+margin-top:10px;
+width:100%;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products List</div>
+<div onclick="openForm()" style="cursor:pointer;">+ Add</div>
+</div>
+
+<div class="search">
+<input type="text" id="search" placeholder="Search..." oninput="searchProduct()">
+</div>
+
+<div id="list"></div>
+
+<!-- modal -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Product</h3>
+
+<input id="name" placeholder="Name">
+<input id="code" placeholder="Code">
+<input id="category" placeholder="Category">
+<input id="mrp" placeholder="MRP">
+<input id="sell" placeholder="Sell Price">
+<input id="stock" placeholder="Stock">
+<input id="image" placeholder="Image URL">
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+/* firebase */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.firebasestorage.app",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let user, allData=[], editId=null;
+
+/* auth */
+onAuthStateChanged(auth, u=>{
+if(!u) location.href="login.html";
+user=u;
+load();
+});
+
+/* load */
+async function load(){
+
+const q = query(collection(db,"products"),where("uid","==",user.uid));
+const snap = await getDocs(q);
+
+allData=[];
+
+snap.forEach(d=>{
+allData.push({id:d.id,...d.data()});
+});
+
+render(allData);
+
+}
+
+/* render */
+function render(data){
+
+const list=document.getElementById("list");
+list.innerHTML="";
+
+data.forEach(d=>{
+
+list.innerHTML+=`
+<div class="card">
+
+<img src="${d.image}" onclick="window.open('${d.image}')">
+
+<div class="details">
+<div class="title">${d.name}</div>
+<div class="price">MRP: ${d.mrp} | Sell: ${d.sell}</div>
+</div>
+
+<div class="right">
+<div>Code: ${d.code}</div>
+<div>Cat: ${d.category}</div>
+<div>Stock: ${d.stock}</div>
+
+<div>
+<span class="btn" onclick="edit('${d.id}')">Edit</span>
+<span class="btn" onclick="del('${d.id}')">Delete</span>
+</div>
+</div>
+
+</div>
+`;
+});
+
+}
+
+/* search */
+window.searchProduct=function(){
+const v=document.getElementById("search").value.toLowerCase();
+const f=allData.filter(d=>
+d.name.toLowerCase().includes(v) ||
+d.code.toLowerCase().includes(v) ||
+d.category.toLowerCase().includes(v)
+);
+render(f);
+}
+
+/* open */
+window.openForm=function(){
+editId=null;
+document.getElementById("modal").style.display="flex";
+}
+
+/* close */
+window.closeForm=function(){
+document.getElementById("modal").style.display="none";
+}
+
+/* save */
+window.save=async function(){
+
+const data={
+name:name.value,
+code:code.value,
+category:category.value,
+mrp:mrp.value,
+sell:sell.value,
+stock:stock.value,
+image:image.value,
+uid:user.uid
+};
+
+if(editId){
+await updateDoc(doc(db,"products",editId),data);
+}else{
+await addDoc(collection(db,"products"),data);
+}
+
+closeForm();
+load();
+
+}
+
+/* edit */
+window.edit=function(id){
+const d=allData.find(x=>x.id==id);
+editId=id;
+
+name.value=d.name;
+code.value=d.code;
+category.value=d.category;
+mrp.value=d.mrp;
+sell.value=d.sell;
+stock.value=d.stock;
+image.value=d.image;
+
+openForm();
+}
+
+/* delete */
+window.del=async function(id){
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"products",id));
+load();
+}
+}
+
+</script>
+
+</body>
+</html>
