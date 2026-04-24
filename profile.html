@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Profile</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, sans-serif;
+}
+
+body{
+background:linear-gradient(180deg,#cfe9c8,#e6f4df);
+padding:15px;
+}
+
+/* header */
+.header{
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+color:#ffbf5e;
+font-size:26px;
+font-weight:bold;
+text-align:center;
+padding:20px;
+border-radius:10px;
+margin-bottom:20px;
+}
+
+/* profile */
+.shop{
+font-size:34px;
+font-weight:bold;
+color:#2c7ecb;
+margin-bottom:20px;
+}
+
+.info{
+font-size:20px;
+color:#2c7ecb;
+margin:15px 0;
+}
+
+/* button */
+.edit-btn{
+display:block;
+margin:30px auto;
+padding:14px 30px;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+color:#ffbf5e;
+font-size:18px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+}
+
+/* divider */
+.divider{
+height:18px;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+margin:20px 0;
+border-radius:6px;
+}
+
+/* footer */
+.footer{
+background:#333;
+color:#8fff8f;
+text-align:center;
+padding:20px;
+border-radius:10px;
+margin-top:20px;
+font-size:18px;
+}
+
+/* modal */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:#fff;
+padding:20px;
+border-radius:12px;
+width:90%;
+max-width:400px;
+}
+
+.form input{
+width:100%;
+padding:12px;
+margin:8px 0;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.btn-row{
+display:flex;
+gap:10px;
+}
+
+.btn{
+flex:1;
+padding:10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.save{background:#00b96b;color:white;}
+.cancel{background:#999;color:white;}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">My Profile Information</div>
+
+<div class="shop" id="name">Loading...</div>
+
+<div class="info"><b>Address:</b> <span id="address">Loading...</span></div>
+
+<div class="info"><b>Contact:</b> <span id="phone">Loading...</span></div>
+
+<button class="edit-btn" onclick="openForm()">Edit My Profile</button>
+
+<div class="divider"></div>
+
+<div class="footer">
+Need Help WhatsApp +8801734289027
+</div>
+
+<!-- modal -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Edit Profile</h3>
+
+<input type="text" id="inputName" placeholder="Shop Name">
+<input type="text" id="inputAddress" placeholder="Address">
+<input type="text" id="inputPhone" placeholder="Phone">
+
+<div class="btn-row">
+<button class="btn save" onclick="save()">Save</button>
+<button class="btn cancel" onclick="closeForm()">Cancel</button>
+</div>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+
+import {
+getAuth,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
+import {
+getFirestore,
+doc,
+getDoc,
+updateDoc
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+
+const firebaseConfig = {
+apiKey: "YOUR_API_KEY",
+authDomain: "YOUR_PROJECT.firebaseapp.com",
+projectId: "YOUR_PROJECT",
+storageBucket: "YOUR_PROJECT.appspot.com",
+messagingSenderId: "XXXX",
+appId: "XXXX"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser = null;
+
+/* load profile */
+onAuthStateChanged(auth, async(user)=>{
+
+if(user){
+currentUser = user;
+
+const ref = doc(db,"users",user.uid);
+const snap = await getDoc(ref);
+
+if(snap.exists()){
+const data = snap.data();
+
+document.getElementById("name").innerText = data.name || "No Name";
+document.getElementById("address").innerText = data.address || "Not set";
+document.getElementById("phone").innerText = data.phone || "Not set";
+}
+
+}else{
+location.href="login.html";
+}
+
+});
+
+/* open */
+window.openForm = function(){
+
+document.getElementById("inputName").value =
+document.getElementById("name").innerText;
+
+document.getElementById("inputAddress").value =
+document.getElementById("address").innerText;
+
+document.getElementById("inputPhone").value =
+document.getElementById("phone").innerText;
+
+document.getElementById("modal").style.display="flex";
+}
+
+/* close */
+window.closeForm = function(){
+document.getElementById("modal").style.display="none";
+}
+
+/* save */
+window.save = async function(){
+
+const name = document.getElementById("inputName").value.trim();
+const address = document.getElementById("inputAddress").value.trim();
+const phone = document.getElementById("inputPhone").value.trim();
+
+if(!name){
+alert("Name required");
+return;
+}
+
+await updateDoc(doc(db,"users",currentUser.uid),{
+name,
+address,
+phone
+});
+
+closeForm();
+location.reload();
+
+}
+
+</script>
+
+</body>
+</html>
