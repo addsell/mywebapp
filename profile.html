@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Profile</title>
+
+<style>
+
+body{
+background:#eaf6e3;
+font-family:Arial;
+padding:15px;
+display:none;
+}
+
+.header{
+background:#2c9ac7;
+color:#fff;
+padding:15px;
+text-align:center;
+font-size:22px;
+}
+
+.shop{
+font-size:28px;
+margin:20px 0;
+}
+
+.info{
+margin:10px 0;
+}
+
+.timer{
+color:red;
+font-size:18px;
+margin:15px 0;
+}
+
+button{
+padding:10px;
+margin:5px 0;
+width:100%;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">Profile</div>
+
+<div class="shop" id="name">...</div>
+
+<div class="info">Address: <span id="address"></span></div>
+<div class="info">Phone: <span id="phone"></span></div>
+
+<div class="timer" id="timer"></div>
+
+<button onclick="buy()">Buy 12 Hours (43200 sec)</button>
+<button onclick="openForm()">Edit Profile</button>
+
+<!-- modal -->
+<div id="modal" style="display:none;">
+<input id="inputName" placeholder="Name">
+<input id="inputAddress" placeholder="Address">
+<input id="inputPhone" placeholder="Phone">
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+</div>
+
+<script type="module">
+
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSy...",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let currentUser;
+let expiryTime = 0;
+
+/* AUTH */
+onAuthStateChanged(auth, async(user)=>{
+
+document.body.style.display="block";
+
+if(!user){
+location.href="login.html";
+return;
+}
+
+currentUser = user;
+
+const ref = doc(db,"users",user.uid);
+const snap = await getDoc(ref);
+
+if(snap.exists()){
+const data = snap.data();
+
+document.getElementById("name").innerText = data.name || "My Shop";
+document.getElementById("address").innerText = data.address || "";
+document.getElementById("phone").innerText = data.phone || "";
+
+expiryTime = data.expiryTime || 0;
+
+startTimer();
+
+}
+
+});
+
+/* TIMER */
+function startTimer(){
+
+function update(){
+
+const now = Date.now();
+const diff = expiryTime - now;
+
+if(diff <= 0){
+document.getElementById("timer").innerText = "Expired ❌";
+return;
+}
+
+const h = Math.floor(diff/1000/60/60);
+const m = Math.floor(diff/1000/60)%60;
+const s = Math.floor(diff/1000)%60;
+
+document.getElementById("timer").innerText =
+`Time Left: ${h}h ${m}m ${s}s`;
+
+setTimeout(update,1000);
+}
+
+update();
+
+}
+
+/* BUY SUBSCRIPTION */
+window.buy = async function(){
+
+const addTime = 43200 * 1000; // 12 hours
+
+expiryTime += addTime;
+
+await updateDoc(doc(db,"users",currentUser.uid),{
+expiryTime
+});
+
+alert("12 Hours Added!");
+
+startTimer();
+
+}
+
+/* EDIT */
+window.openForm = function(){
+modal.style.display="block";
+}
+
+window.closeForm = function(){
+modal.style.display="none";
+}
+
+window.save = async function(){
+
+await setDoc(doc(db,"users",currentUser.uid),{
+name: inputName.value,
+address: inputAddress.value,
+phone: inputPhone.value
+},{merge:true});
+
+alert("Saved");
+location.reload();
+
+}
+
+</script>
+
+</body>
+</html>
