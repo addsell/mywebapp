@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products</title>
+
+<style>
+body{
+font-family:Arial;
+background:#eaf6e3;
+padding:10px;
+display:none;
+}
+
+.header{
+display:flex;
+justify-content:space-between;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+color:#ffbf5e;
+padding:15px;
+border-radius:10px;
+}
+
+.card{
+background:linear-gradient(90deg,#7b4cff,#00c37a);
+padding:15px;
+margin:10px 0;
+border-radius:20px;
+display:flex;
+gap:10px;
+}
+
+.card img{
+width:80px;
+height:100px;
+object-fit:cover;
+border-radius:10px;
+}
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:#fff;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:400px;
+}
+
+.form input,.form select{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+
+button{
+padding:10px;
+width:100%;
+margin-top:5px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products</div>
+<div onclick="openForm()">+ Add</div>
+</div>
+
+<h3 id="totalProfit"></h3>
+
+<div id="list"></div>
+
+<!-- modal -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Product</h3>
+
+<input id="name" placeholder="Name">
+<input id="code" placeholder="Code">
+
+<select id="category">
+<option value="">Choose Category</option>
+</select>
+
+<input id="buy" placeholder="Buy Price">
+<input id="sell" placeholder="Sell Price">
+<input id="stock" placeholder="Stock">
+
+<input type="file" id="imageFile">
+
+<button onclick="createCategory()">+ Create Category</button>
+<button onclick="deleteCategory()">Delete Category</button>
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+/* Firebase */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let user = null;
+let products = [];
+let categories = [];
+let initialized = false;
+
+/* 🔥 AUTH FIX */
+onAuthStateChanged(auth, async (u)=>{
+
+await new Promise(res=>setTimeout(res,300));
+
+document.body.style.display="block";
+
+if(!u){
+window.location.replace("login.html");
+return;
+}
+
+if(initialized) return;
+initialized = true;
+
+user = u;
+
+init();
+
+});
+
+/* INIT */
+function init(){
+loadCategories();
+loadProducts();
+}
+
+/* CATEGORY LOAD */
+async function loadCategories(){
+
+const snap = await getDocs(
+query(collection(db,"categories"), where("uid","==",user.uid))
+);
+
+categories = [];
+
+snap.forEach(d=>{
+categories.push({id:d.id,...d.data()});
+});
+
+const select = document.getElementById("category");
+
+select.innerHTML = `<option value="">Choose Category</option>`;
+
+categories.forEach(c=>{
+select.innerHTML += `<option value="${c.name}">${c.name}</option>`;
+});
+
+}
+
+/* CREATE CATEGORY */
+window.createCategory = async function(){
+
+const name = prompt("Category name?");
+if(!name) return;
+
+await addDoc(collection(db,"categories"),{
+name,
+uid:user.uid
+});
+
+loadCategories();
+
+}
+
+/* DELETE CATEGORY */
+window.deleteCategory = async function(){
+
+const name = document.getElementById("category").value;
+if(!name){
+alert("Select category");
+return;
+}
+
+const snap = await getDocs(query(
+collection(db,"categories"),
+where("name","==",name),
+where("uid","==",user.uid)
+));
+
+snap.forEach(async d=>{
+await deleteDoc(doc(db,"categories",d.id));
+});
+
+loadCategories();
+
+}
+
+/* LOAD PRODUCTS */
+async function loadProducts(){
+
+const snap = await getDocs(
+query(collection(db,"products"), where("uid","==",user.uid))
+);
+
+products = [];
+
+snap.forEach(d=>{
+products.push({id:d.id,...d.data()});
+});
+
+render();
+
+}
+
+/* RENDER */
+function render(){
+
+let totalProfit = 0;
+
+const list = document.getElementById("list");
+list.innerHTML = "";
+
+products.forEach(p=>{
+
+const buy = Number(p.buy || 0);
+const sell = Number(p.sell || 0);
+const stock = Number(p.stock || 0);
+
+const profit = sell - buy;
+const total = profit * stock;
+
+totalProfit += total;
+
+list.innerHTML += `
+<div class="card">
+
+<img src="${p.image || ''}">
+
+<div>
+<b>${p.name}</b><br>
+
+Buy: ${buy} | Sell: ${sell}<br>
+Stock: ${stock}<br>
+
+Profit/unit: ${profit}<br>
+Total Profit: ${total}<br>
+
+Category: ${p.category || ""}<br>
+
+<button onclick="sell('${p.id}',${stock})">Sell</button>
+<button onclick="del('${p.id}')">Delete</button>
+
+</div>
+</div>
+`;
+});
+
+document.getElementById("totalProfit").innerText =
+"Total Profit: " + totalProfit;
+
+}
+
+/* SELL */
+window.sell = async function(id, stock){
+
+if(stock <= 0){
+alert("No stock left");
+return;
+}
+
+await updateDoc(doc(db,"products",id),{
+stock: stock - 1
+});
+
+loadProducts();
+
+}
+
+/* IMAGE */
+function toBase64(file){
+return new Promise(res=>{
+const reader = new FileReader();
+reader.onload = ()=>res(reader.result);
+reader.readAsDataURL(file);
+});
+}
+
+/* SAVE */
+window.save = async function(){
+
+if(!name.value || !buy.value || !sell.value){
+alert("Fill required fields");
+return;
+}
+
+const file = document.getElementById("imageFile").files[0];
+let image = "";
+
+if(file){
+image = await toBase64(file);
+}
+
+await addDoc(collection(db,"products"),{
+name: name.value,
+code: code.value,
+category: category.value || "",
+buy: Number(buy.value),
+sell: Number(sell.value),
+stock: Number(stock.value),
+image,
+uid: user.uid
+});
+
+closeForm();
+loadProducts();
+
+}
+
+/* DELETE */
+window.del = async function(id){
+
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"products",id));
+loadProducts();
+}
+
+}
+
+/* MODAL */
+window.openForm = ()=>modal.style.display="flex";
+window.closeForm = ()=>modal.style.display="none";
+
+</script>
+
+</body>
+</html>
