@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products</title>
+
+<style>
+body{font-family:Arial;background:#eaf6e3;padding:10px;}
+.header{display:flex;justify-content:space-between;background:linear-gradient(90deg,#2c9ac7,#1e5f9a);color:#ffbf5e;padding:15px;border-radius:10px;}
+.card{background:linear-gradient(90deg,#7b4cff,#00c37a);padding:15px;margin:10px 0;border-radius:20px;display:flex;gap:10px;}
+.card img{width:80px;height:100px;object-fit:cover;border-radius:10px;}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;justify-content:center;align-items:center;}
+.form{background:#fff;padding:20px;border-radius:10px;width:90%;max-width:400px;}
+.form input,.form select{width:100%;padding:10px;margin:5px 0;}
+button{padding:10px;width:100%;margin-top:5px;}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products</div>
+<div onclick="openForm()">+ Add</div>
+</div>
+
+<h3 id="totalProfit"></h3>
+<div id="list"></div>
+
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Product</h3>
+
+<input id="name" placeholder="Name">
+<input id="code" placeholder="Code">
+
+<select id="category"></select>
+
+<input id="buy" placeholder="Buy Price" type="number">
+<input id="sell" placeholder="Sell Price" type="number">
+<input id="stock" placeholder="Stock" type="number">
+
+<input type="file" id="imageFile">
+
+<button onclick="createCategory()">+ Create Category</button>
+<button onclick="deleteCategory()">Delete Category</button>
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636",
+storageBucket: "mywebapp-93636.appspot.com",
+messagingSenderId: "644012557966",
+appId: "1:644012557966:web:aee6cc2a2621c41cf7ebdf"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+let user=null;
+let initialized=false;
+let products=[];
+let categories=[];
+
+/* AUTH FIX */
+onAuthStateChanged(auth,(u)=>{
+if(!u){
+window.location.replace("login.html");
+return;
+}
+if(initialized) return;
+initialized=true;
+
+user=u;
+init();
+});
+
+function init(){
+loadCategories();
+loadProducts();
+}
+
+/* CATEGORY */
+async function loadCategories(){
+const snap=await getDocs(query(collection(db,"categories"),where("uid","==",user.uid)));
+
+categories=[];
+snap.forEach(d=>categories.push(d.data()));
+
+category.innerHTML='<option value="">Choose Category</option>';
+categories.forEach(c=>{
+category.innerHTML+=`<option>${c.name}</option>`;
+});
+}
+
+window.createCategory=async()=>{
+const name=prompt("Category?");
+if(!name) return;
+
+await addDoc(collection(db,"categories"),{name,uid:user.uid});
+loadCategories();
+}
+
+window.deleteCategory=async()=>{
+const name=category.value;
+if(!name) return;
+
+const snap=await getDocs(query(collection(db,"categories"),
+where("name","==",name),
+where("uid","==",user.uid)));
+
+snap.forEach(async d=>{
+await deleteDoc(doc(db,"categories",d.id));
+});
+
+loadCategories();
+}
+
+/* PRODUCTS */
+async function loadProducts(){
+const snap=await getDocs(query(collection(db,"products"),where("uid","==",user.uid)));
+
+products=[];
+snap.forEach(d=>products.push({id:d.id,...d.data()}));
+
+render();
+}
+
+function render(){
+let total=0;
+list.innerHTML="";
+
+products.forEach(p=>{
+
+const profit=(p.sell||0)-(p.buy||0);
+total+=profit*(p.stock||0);
+
+list.innerHTML+=`
+<div class="card">
+<img src="${p.image||''}">
+<div>
+<b>${p.name}</b><br>
+Buy:${p.buy} | Sell:${p.sell}<br>
+Stock:${p.stock}<br>
+Profit/unit:${profit}<br>
+
+<button onclick="sell('${p.id}',${p.stock})">Sell</button>
+<button onclick="del('${p.id}')">Delete</button>
+</div>
+</div>`;
+});
+
+totalProfit.innerText="Total Profit: "+total;
+}
+
+/* SELL */
+window.sell=async(id,stock)=>{
+if(stock<=0) return alert("No stock");
+
+await updateDoc(doc(db,"products",id),{
+stock:stock-1
+});
+
+loadProducts();
+}
+
+/* IMAGE */
+function toBase64(file){
+return new Promise(res=>{
+const r=new FileReader();
+r.onload=()=>res(r.result);
+r.readAsDataURL(file);
+});
+}
+
+/* SAVE FIXED */
+window.save=async()=>{
+
+const nameVal=name.value.trim();
+const codeVal=code.value.trim();
+const catVal=category.value;
+const buyVal=Number(buy.value);
+const sellVal=Number(sell.value);
+const stockVal=Number(stock.value);
+
+if(!nameVal || !codeVal || !catVal || !buyVal || !sellVal || !stockVal){
+alert("Fill all fields properly");
+return;
+}
+
+let image="";
+const file=imageFile.files[0];
+if(file){
+image=await toBase64(file);
+}
+
+await addDoc(collection(db,"products"),{
+name:nameVal,
+code:codeVal,
+category:catVal,
+buy:buyVal,
+sell:sellVal,
+stock:stockVal,
+image,
+uid:user.uid
+});
+
+closeForm();
+loadProducts();
+}
+
+/* DELETE */
+window.del=async(id)=>{
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"products",id));
+loadProducts();
+}
+}
+
+/* MODAL */
+window.openForm=()=>modal.style.display="flex";
+window.closeForm=()=>modal.style.display="none";
+
+</script>
+
+</body>
+</html>
