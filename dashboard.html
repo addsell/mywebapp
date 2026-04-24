@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>User Dashboard</title>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial, sans-serif;
+}
+
+body{
+background:#dff0d8;
+min-height:100vh;
+}
+
+.topbar{
+width:100%;
+padding:18px;
+text-align:center;
+font-size:28px;
+font-weight:bold;
+color:white;
+background:linear-gradient(90deg,#2c9ac7,#1e5f9a);
+}
+
+.welcome{
+text-align:center;
+padding:10px;
+font-size:20px;
+font-weight:bold;
+color:#2b5b00;
+}
+
+.timer{
+text-align:center;
+font-size:18px;
+color:red;
+margin-bottom:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:14px;
+padding:14px;
+}
+
+.card{
+background:linear-gradient(180deg,#7ea8b7,#173a57);
+border-radius:28px;
+padding:18px 10px;
+text-align:center;
+color:#8be000;
+font-size:18px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.lock{
+opacity:0.4;
+pointer-events:none;
+position:relative;
+}
+
+.lock::after{
+content:"🔒";
+position:absolute;
+top:5px;
+right:10px;
+font-size:20px;
+}
+
+.logout-box{
+margin:20px;
+text-align:center;
+}
+
+.logout-btn{
+background:#3f9918;
+color:white;
+border:none;
+padding:14px 35px;
+font-size:18px;
+border-radius:14px;
+cursor:pointer;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">My Dashboard</div>
+
+<div class="welcome" id="welcomeText">Welcome...</div>
+
+<div class="timer" id="timer"></div>
+
+<div class="grid" id="grid">
+
+<div class="card" onclick="go('outlet.html')">🏢<br>Outlet</div>
+<div class="card" onclick="go('products.html')">📦<br>Products</div>
+<div class="card" onclick="go('stock.html')">📊<br>Stock</div>
+<div class="card" onclick="go('sale.html')">💰<br>Sale</div>
+<div class="card" onclick="go('sales-report.html')">📈<br>Report</div>
+<div class="card" onclick="go('due-report.html')">🧾<br>Due</div>
+<div class="card" onclick="go('note.html')">📝<br>Note</div>
+<div class="card" onclick="go('summary.html')">📋<br>Summary</div>
+<div class="card" onclick="go('profile.html')">👤<br>Profile</div>
+
+</div>
+
+<div class="logout-box">
+<button class="logout-btn" onclick="logout()">LOGOUT</button>
+</div>
+
+<script type="module">
+
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+
+import {
+getAuth,
+onAuthStateChanged,
+signOut,
+setPersistence,
+browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+import {
+getFirestore,
+doc,
+getDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+/* 🔥 persistence */
+await setPersistence(auth, browserLocalPersistence);
+
+let initialized = false;
+
+/* ✅ AUTH FIX */
+onAuthStateChanged(auth, async(user)=>{
+
+if(!user){
+window.location.href="login.html";
+return;
+}
+
+/* prevent loop */
+if(initialized) return;
+initialized = true;
+
+const ref = doc(db,"users",user.uid);
+const snap = await getDoc(ref);
+
+if(!snap.exists()) return;
+
+const data = snap.data();
+
+document.getElementById("welcomeText").innerText =
+"Welcome, " + data.name;
+
+/* 🔥 TIMER + LOCK SYSTEM */
+startTimer(data.expiryTime);
+
+});
+
+
+/* TIMER */
+function startTimer(expiry){
+
+function update(){
+
+const now = Date.now();
+const diff = expiry - now;
+
+if(diff <= 0){
+document.getElementById("timer").innerText = "Expired ❌";
+
+/* lock all */
+document.querySelectorAll(".card").forEach(c=>{
+c.classList.add("lock");
+});
+
+return;
+}
+
+const h = Math.floor(diff/1000/60/60);
+const m = Math.floor(diff/1000/60)%60;
+const s = Math.floor(diff/1000)%60;
+
+document.getElementById("timer").innerText =
+`Time Left: ${h}h ${m}m ${s}s`;
+
+setTimeout(update,1000);
+
+}
+
+update();
+
+}
+
+
+/* navigation */
+window.go=function(page){
+window.location.href=page;
+}
+
+/* logout */
+window.logout=function(){
+signOut(auth).then(()=>{
+window.location.href="login.html";
+});
+}
+
+</script>
+
+</body>
+</html>
