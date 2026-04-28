@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outlet</title>
+
+<style>
+body{
+font-family:Arial;
+background:#cfe3c8;
+padding:10px;
+}
+
+.top{
+display:flex;
+justify-content:space-between;
+background:#2a9df4;
+color:#fff;
+padding:15px;
+border-radius:10px;
+font-size:18px;
+}
+
+.card{
+background:#00a9a5;
+color:white;
+padding:15px;
+margin-top:10px;
+border-radius:12px;
+}
+
+.shop{
+font-size:20px;
+font-weight:bold;
+}
+
+.info{
+font-size:14px;
+margin-top:4px;
+}
+
+.actions{
+margin-top:10px;
+display:flex;
+gap:8px;
+}
+
+.btn{
+padding:8px 10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+.edit{background:#ffe48f;}
+.delete{background:#ffb3b3;}
+
+.call{
+display:inline-block;
+margin-top:6px;
+background:white;
+color:black;
+padding:6px 10px;
+border-radius:8px;
+text-decoration:none;
+font-size:14px;
+}
+
+.modal{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:white;
+padding:20px;
+width:90%;
+max-width:400px;
+border-radius:10px;
+}
+
+.form input{
+width:100%;
+padding:10px;
+margin:6px 0;
+}
+
+.form button{
+width:100%;
+padding:10px;
+margin-top:6px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+<div>Total: <span id="total">0</span></div>
+<div onclick="openForm()">+ Add</div>
+</div>
+
+<input id="search" placeholder="Search" style="width:100%;padding:10px;margin-top:10px;">
+
+<div id="list"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Outlet</h3>
+
+<input id="shop" placeholder="Shop Name">
+<input id="owner" placeholder="Owner Name">
+<input id="phone" placeholder="Phone">
+<input id="address" placeholder="Address">
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+doc, updateDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import {
+getAuth, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+/* CONFIG */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let outlets=[];
+let editId=null;
+let user=null;
+
+/* AUTH */
+onAuthStateChanged(auth,(u)=>{
+if(!u){
+alert("Login first");
+return;
+}
+user=u;
+loadRealtime();
+});
+
+/* REALTIME */
+function loadRealtime(){
+onSnapshot(collection(db,"outlets"),snap=>{
+outlets=[];
+
+snap.forEach(d=>{
+let data=d.data();
+if(data.uid===user.uid){
+outlets.push({id:d.id,...data});
+}
+});
+
+render(outlets);
+total.innerText=outlets.length;
+});
+}
+
+/* RENDER FIXED */
+function render(data){
+list.innerHTML="";
+
+if(data.length===0){
+list.innerHTML="<p>No outlet found</p>";
+return;
+}
+
+data.forEach(o=>{
+list.innerHTML+=`
+<div class="card">
+
+<div class="shop">${o.shopName}</div>
+
+<a class="call" href="tel:${o.phone}">
+📞 Call: ${o.phone}
+</a>
+
+<div class="info">Owner: ${o.ownerName || "-"}</div>
+<div class="info">Address: ${o.address || "-"}</div>
+
+<div class="actions">
+<button class="btn edit" onclick="edit('${o.id}')">Edit</button>
+<button class="btn delete" onclick="del('${o.id}')">Delete</button>
+</div>
+
+</div>
+`;
+});
+}
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+render(outlets.filter(o=>
+(o.shopName||"").toLowerCase().includes(v) ||
+(o.phone||"").includes(v)
+));
+};
+
+/* FORM */
+window.openForm=()=>{
+editId=null;
+shop.value="";
+owner.value="";
+phone.value="";
+address.value="";
+modal.style.display="flex";
+};
+
+window.closeForm=()=>{
+modal.style.display="none";
+};
+
+/* SAVE */
+window.save=async()=>{
+try{
+
+if(!shop.value || !phone.value){
+alert("Shop & Phone required");
+return;
+}
+
+let data={
+shopName:shop.value,
+ownerName:owner.value,
+phone:phone.value,
+address:address.value,
+uid:user.uid
+};
+
+if(editId){
+await updateDoc(doc(db,"outlets",editId),data);
+}else{
+await addDoc(collection(db,"outlets"),data);
+}
+
+closeForm();
+
+}catch(e){
+console.error(e);
+alert("Error saving data");
+}
+};
+
+/* EDIT */
+window.edit=(id)=>{
+let o=outlets.find(x=>x.id==id);
+
+editId=id;
+shop.value=o.shopName;
+owner.value=o.ownerName;
+phone.value=o.phone;
+address.value=o.address;
+
+modal.style.display="flex";
+};
+
+/* DELETE */
+window.del=async(id)=>{
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"outlets",id));
+}
+};
+
+</script>
+
+</body>
+</html>
