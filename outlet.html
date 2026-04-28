@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outlet</title>
+
+<style>
+body{
+margin:0;
+font-family:sans-serif;
+background:linear-gradient(135deg,#c8e6c9,#a5d6a7);
+padding:12px;
+}
+
+/* HEADER */
+.top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(90deg,#2c7ecb,#2a9df4);
+padding:18px;
+border-radius:14px;
+color:#ffc55c;
+font-size:22px;
+font-weight:bold;
+}
+
+/* SEARCH */
+.search{
+margin:12px 0;
+}
+.search input{
+width:100%;
+padding:12px;
+border-radius:12px;
+border:none;
+font-size:16px;
+}
+
+/* CARD */
+.card{
+background:linear-gradient(135deg,#00a9a5,#17c1bd);
+padding:18px;
+border-radius:16px;
+margin-bottom:12px;
+color:white;
+box-shadow:0 6px 14px rgba(0,0,0,0.2);
+}
+
+/* TOP ROW */
+.row{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.shop{
+font-size:26px;
+font-weight:bold;
+}
+
+/* CALL BUTTON */
+.call{
+background:#f4b400;
+color:black;
+padding:10px 16px;
+border-radius:10px;
+text-decoration:none;
+font-weight:bold;
+}
+
+/* INFO */
+.info{
+margin-top:6px;
+font-size:16px;
+}
+
+/* ACTIONS */
+.actions{
+margin-top:12px;
+display:flex;
+gap:10px;
+}
+
+.btn{
+flex:1;
+padding:12px;
+border:none;
+border-radius:10px;
+font-size:16px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.edit{
+background:#8bc34a;
+color:black;
+}
+
+.delete{
+background:#ff5252;
+color:white;
+}
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;left:0;
+width:100%;height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:white;
+padding:20px;
+border-radius:12px;
+width:90%;
+max-width:400px;
+}
+
+.form input{
+width:100%;
+padding:12px;
+margin:6px 0;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+.form button{
+width:100%;
+padding:12px;
+margin-top:6px;
+border:none;
+border-radius:8px;
+font-weight:bold;
+}
+
+.saveBtn{background:#4caf50;color:white;}
+.cancelBtn{background:#ddd;}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="top">
+<div>Total Outlets: <span id="total">0</span></div>
+<div onclick="openForm()">Add Outlet</div>
+</div>
+
+<!-- SEARCH -->
+<div class="search">
+<input id="search" placeholder="Search outlet...">
+</div>
+
+<!-- LIST -->
+<div id="list"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Outlet</h3>
+
+<input id="shop" placeholder="Shop Name">
+<input id="owner" placeholder="Owner Name">
+<input id="phone" placeholder="Phone">
+<input id="address" placeholder="Address">
+
+<button class="saveBtn" onclick="save()">Save</button>
+<button class="cancelBtn" onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+doc, updateDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import {
+getAuth, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+/* CONFIG */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let outlets=[];
+let editId=null;
+let user=null;
+
+/* AUTH */
+onAuthStateChanged(auth,(u)=>{
+if(!u){
+alert("Login first");
+return;
+}
+user=u;
+loadRealtime();
+});
+
+/* REALTIME */
+function loadRealtime(){
+onSnapshot(collection(db,"outlets"),snap=>{
+outlets=[];
+
+snap.forEach(d=>{
+let data=d.data();
+if(data.uid===user.uid){
+outlets.push({id:d.id,...data});
+}
+});
+
+render(outlets);
+total.innerText=outlets.length;
+});
+}
+
+/* RENDER */
+function render(data){
+list.innerHTML="";
+
+if(data.length===0){
+list.innerHTML="<p>No outlet found</p>";
+return;
+}
+
+data.forEach(o=>{
+list.innerHTML+=`
+<div class="card">
+
+<div class="row">
+<div class="shop">${o.shopName}</div>
+
+<a class="call" href="tel:${o.phone}">
+📞 Call
+</a>
+</div>
+
+<div class="info"><b>Owner:</b> ${o.ownerName || "-"}</div>
+<div class="info"><b>Address:</b> ${o.address || "-"}</div>
+
+<div class="actions">
+<button class="btn edit" onclick="edit('${o.id}')">Edit</button>
+<button class="btn delete" onclick="del('${o.id}')">Delete</button>
+</div>
+
+</div>
+`;
+});
+}
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+render(outlets.filter(o=>
+(o.shopName||"").toLowerCase().includes(v) ||
+(o.phone||"").includes(v)
+));
+};
+
+/* FORM */
+window.openForm=()=>{
+editId=null;
+shop.value="";
+owner.value="";
+phone.value="";
+address.value="";
+modal.style.display="flex";
+};
+
+window.closeForm=()=>{
+modal.style.display="none";
+};
+
+/* SAVE */
+window.save=async()=>{
+try{
+
+if(!shop.value || !phone.value){
+alert("Shop & Phone required");
+return;
+}
+
+let data={
+shopName:shop.value,
+ownerName:owner.value,
+phone:phone.value,
+address:address.value,
+uid:user.uid
+};
+
+if(editId){
+await updateDoc(doc(db,"outlets",editId),data);
+}else{
+await addDoc(collection(db,"outlets"),data);
+}
+
+closeForm();
+
+}catch(e){
+console.error(e);
+alert("Error saving data");
+}
+};
+
+/* EDIT */
+window.edit=(id)=>{
+let o=outlets.find(x=>x.id==id);
+
+editId=id;
+shop.value=o.shopName;
+owner.value=o.ownerName;
+phone.value=o.phone;
+address.value=o.address;
+
+modal.style.display="flex";
+};
+
+/* DELETE */
+window.del=async(id)=>{
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"outlets",id));
+}
+};
+
+</script>
+
+</body>
+</html>
