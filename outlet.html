@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outlet</title>
+
+<style>
+body{font-family:Arial;background:#cfe3c8;padding:10px;}
+
+.top{
+display:flex;justify-content:space-between;
+background:#2a9df4;color:#fff;padding:15px;border-radius:10px;
+}
+
+.card{
+background:#00a9a5;color:white;
+padding:12px;margin-top:10px;border-radius:10px;
+}
+
+.btn{padding:8px;margin-top:5px;}
+
+.modal{
+position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(0,0,0,0.5);
+display:none;justify-content:center;align-items:center;
+}
+
+.form{
+background:white;padding:20px;width:90%;max-width:400px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+<div>Total: <span id="total">0</span></div>
+<div onclick="openForm()">+ Add</div>
+</div>
+
+<input id="search" placeholder="Search">
+
+<div id="list"></div>
+
+<div class="modal" id="modal">
+<div class="form">
+
+<h3 id="title">Add</h3>
+
+<input id="shop" placeholder="Shop Name"><br>
+<input id="owner" placeholder="Owner"><br>
+<input id="phone" placeholder="Phone"><br>
+<input id="address" placeholder="Address"><br>
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+doc, updateDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import {
+getAuth, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+/* CONFIG */
+const firebaseConfig = {
+apiKey: "AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let outlets=[];
+let editId=null;
+let user=null;
+
+/* AUTH */
+onAuthStateChanged(auth,(u)=>{
+if(!u){
+alert("Login first");
+return;
+}
+user=u;
+loadRealtime();
+});
+
+/* REALTIME FIX */
+function loadRealtime(){
+
+onSnapshot(collection(db,"outlets"),snap=>{
+outlets=[];
+
+snap.forEach(d=>{
+let data=d.data();
+
+/* IMPORTANT FIX: only show own data */
+if(data.uid===user.uid){
+outlets.push({id:d.id,...data});
+}
+
+});
+
+render(outlets);
+total.innerText=outlets.length;
+
+});
+}
+
+/* RENDER */
+function render(data){
+list.innerHTML="";
+
+data.forEach(o=>{
+list.innerHTML+=`
+<div class="card">
+<b>${o.shopName}</b><br>
+📞 ${o.phone}<br>
+
+<button onclick="edit('${o.id}')">Edit</button>
+<button onclick="del('${o.id}')">Delete</button>
+</div>
+`;
+});
+}
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+render(outlets.filter(o=>
+o.shopName.toLowerCase().includes(v) ||
+o.phone.includes(v)
+));
+};
+
+/* FORM */
+window.openForm=()=>{
+editId=null;
+shop.value="";
+owner.value="";
+phone.value="";
+address.value="";
+modal.style.display="flex";
+};
+
+window.closeForm=()=>{
+modal.style.display="none";
+};
+
+/* SAVE FIX */
+window.save=async()=>{
+
+try{
+
+if(!shop.value || !phone.value){
+alert("Required");
+return;
+}
+
+let data={
+shopName:shop.value,
+ownerName:owner.value,
+phone:phone.value,
+address:address.value,
+uid:user.uid
+};
+
+if(editId){
+await updateDoc(doc(db,"outlets",editId),data);
+}else{
+await addDoc(collection(db,"outlets"),data);
+}
+
+closeForm();
+
+}catch(e){
+console.error("SAVE ERROR:",e);
+alert("Error saving data");
+}
+
+};
+
+/* EDIT */
+window.edit=(id)=>{
+let o=outlets.find(x=>x.id==id);
+
+editId=id;
+shop.value=o.shopName;
+owner.value=o.ownerName;
+phone.value=o.phone;
+address.value=o.address;
+
+modal.style.display="flex";
+};
+
+/* DELETE */
+window.del=async(id)=>{
+if(confirm("Delete?")){
+await deleteDoc(doc(db,"outlets",id));
+}
+};
+
+</script>
+
+</body>
+</html>
