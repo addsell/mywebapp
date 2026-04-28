@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products</title>
+
+<style>
+body{
+font-family:Arial;
+margin:0;
+background:linear-gradient(#dff3dc,#9dd39d);
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:15px;
+background:linear-gradient(90deg,#2c7ecb,#2a9df4);
+color:#ffcc66;
+font-size:22px;
+font-weight:bold;
+}
+
+/* SEARCH */
+.search{
+margin:10px;
+background:#7bd389;
+padding:12px;
+border-radius:40px;
+}
+.search input{
+width:100%;
+border:none;
+background:none;
+font-size:16px;
+outline:none;
+}
+
+/* CATEGORY BAR */
+.cat-bar{
+display:flex;
+gap:10px;
+padding:10px;
+overflow:auto;
+}
+.cat{
+background:#7bd389;
+padding:8px 20px;
+border-radius:20px;
+cursor:pointer;
+}
+
+/* CARD */
+.card{
+margin:10px;
+padding:12px;
+border-radius:20px;
+background:linear-gradient(90deg,#7b4ce2,#00a86b);
+display:flex;
+gap:10px;
+}
+.card img{
+width:70px;height:70px;
+border-radius:10px;
+}
+.info{flex:1;}
+.title{font-size:20px;}
+.right{text-align:right}
+
+/* BUTTON */
+.btn{
+padding:6px 10px;
+border:none;
+border-radius:10px;
+margin-top:5px;
+}
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+.form{
+background:#fff;
+padding:20px;
+border-radius:10px;
+width:90%;
+max-width:400px;
+}
+.form input,.form select{
+width:100%;
+padding:10px;
+margin:5px 0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products List</div>
+<div onclick="openForm()">+ Add Products</div>
+</div>
+
+<div class="search">
+<input id="search" placeholder="Search Name/Code/Category">
+</div>
+
+<div class="cat-bar" id="cats"></div>
+<div id="list"></div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h3>Add Product</h3>
+
+<input type="file" id="image">
+<input id="name" placeholder="Product Name">
+<input id="code" placeholder="Product Code">
+
+<select id="category"></select>
+
+<input id="stock" placeholder="Stock">
+<input id="buy" placeholder="Buy Price">
+<input id="sell" placeholder="Sell Price">
+<input id="mrp" placeholder="MRP">
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<!-- CATEGORY MODAL -->
+<div class="modal" id="catModal">
+<div class="form">
+
+<h3>Category</h3>
+
+<input id="newCat" placeholder="New Category">
+<button onclick="addCategory()">Add</button>
+
+<div id="catList"></div>
+
+<button onclick="closeCat()">Close</button>
+
+</div>
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+query, where, deleteDoc, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import { getAuth, onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+/* 🔥 YOUR CONFIG */
+const firebaseConfig = {
+apiKey:"AIzaSyBpqOjnQC8yuE0NSCLtKNu83xtpHNd98x4",
+authDomain:"mywebapp-93636.firebaseapp.com",
+projectId:"mywebapp-93636"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let user=null;
+let products=[];
+
+/* AUTH */
+onAuthStateChanged(auth,(u)=>{
+if(!u){ alert("Login first"); return; }
+user=u;
+loadProducts();
+loadCategory();
+});
+
+/* LOAD PRODUCTS */
+function loadProducts(){
+onSnapshot(query(collection(db,"products"), where("uid","==",user.uid)),snap=>{
+products=[];
+list.innerHTML="";
+snap.forEach(d=>{
+let p=d.data();
+p.id=d.id;
+products.push(p);
+});
+render(products);
+});
+}
+
+/* LOAD CATEGORY */
+function loadCategory(){
+onSnapshot(query(collection(db,"categories"), where("uid","==",user.uid)),snap=>{
+category.innerHTML="";
+cats.innerHTML="<div class='cat' onclick='filterCat(\"All\")'>All</div>";
+catList.innerHTML="";
+
+snap.forEach(d=>{
+let c=d.data();
+
+category.innerHTML+=`<option>${c.name}</option>`;
+cats.innerHTML+=`<div class="cat" onclick='filterCat("${c.name}")'>${c.name}</div>`;
+
+catList.innerHTML+=`
+<div>
+${c.name}
+<button onclick="deleteCat('${d.id}')">Delete</button>
+</div>`;
+});
+});
+}
+
+/* RENDER */
+function render(data){
+list.innerHTML="";
+data.forEach(p=>{
+list.innerHTML+=`
+<div class="card">
+<img src="${p.img || 'https://via.placeholder.com/70'}">
+<div class="info">
+<div class="title">${p.name}</div>
+MRP: ${p.mrp} | Sell: ${p.sell}
+<br>Code: ${p.code}
+<br>${p.category}
+</div>
+<div class="right">
+Stock: ${p.stock}<br>
+<button class="btn" onclick="edit('${p.id}')">Edit</button>
+<button class="btn" onclick="del('${p.id}')">Delete</button>
+</div>
+</div>`;
+});
+}
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+render(products.filter(p=>
+(p.name||"").toLowerCase().includes(v) ||
+(p.code||"").includes(v) ||
+(p.category||"").toLowerCase().includes(v)
+));
+};
+
+/* FILTER */
+window.filterCat=(c)=>{
+if(c=="All") render(products);
+else render(products.filter(p=>p.category==c));
+};
+
+/* MODAL */
+window.openForm=()=>modal.style.display="flex";
+window.closeForm=()=>modal.style.display="none";
+
+window.openCat=()=>catModal.style.display="flex";
+window.closeCat=()=>catModal.style.display="none";
+
+/* ADD CATEGORY */
+window.addCategory=async()=>{
+if(!newCat.value.trim()) return;
+
+await addDoc(collection(db,"categories"),{
+name:newCat.value,
+uid:user.uid
+});
+newCat.value="";
+};
+
+/* DELETE CATEGORY */
+window.deleteCat=async(id)=>{
+await deleteDoc(doc(db,"categories",id));
+};
+
+/* DELETE PRODUCT */
+window.del=async(id)=>{
+await deleteDoc(doc(db,"products",id));
+};
+
+/* SAVE PRODUCT */
+window.save=async()=>{
+
+let img="";
+
+if(image.files.length>0){
+let reader=new FileReader();
+reader.onload=async(e)=>{
+img=e.target.result;
+
+await addDoc(collection(db,"products"),{
+name:name.value,
+code:code.value,
+category:category.value,
+stock:Number(stock.value||0),
+buy:Number(buy.value||0),
+sell:Number(sell.value||0),
+mrp:Number(mrp.value||0),
+img:img,
+uid:user.uid
+});
+
+closeForm();
+};
+reader.readAsDataURL(image.files[0]);
+
+}else{
+
+await addDoc(collection(db,"products"),{
+name:name.value,
+code:code.value,
+category:category.value,
+stock:Number(stock.value||0),
+buy:Number(buy.value||0),
+sell:Number(sell.value||0),
+mrp:Number(mrp.value||0),
+img:"",
+uid:user.uid
+});
+
+closeForm();
+}
+
+};
+
+</script>
+</body>
+</html>
