@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products</title>
+
+<style>
+body{
+margin:0;
+font-family:sans-serif;
+background:linear-gradient(135deg,#d7f0d4,#b6e2b0);
+}
+
+/* HEADER */
+.header{
+display:flex;
+justify-content:space-between;
+padding:15px;
+background:linear-gradient(90deg,#4ca1af,#2c3e50);
+color:#ffc55c;
+font-size:22px;
+font-weight:bold;
+}
+
+/* SEARCH */
+.search{
+margin:10px;
+background:#7bd27b;
+padding:12px;
+border-radius:30px;
+display:flex;
+}
+.search input{
+border:none;
+background:none;
+outline:none;
+width:100%;
+font-size:16px;
+}
+
+/* CATEGORY */
+.catBox{
+display:flex;
+gap:10px;
+padding:10px;
+overflow:auto;
+}
+.cat{
+background:#7bd27b;
+padding:8px 15px;
+border-radius:20px;
+cursor:pointer;
+white-space:nowrap;
+}
+
+/* VIEW SWITCH */
+.viewSwitch{
+display:flex;
+gap:10px;
+padding:10px;
+}
+.viewBtn{
+padding:8px;
+background:#3498db;
+color:white;
+border-radius:8px;
+cursor:pointer;
+}
+
+/* CARD LIST */
+.card{
+margin:10px;
+padding:12px;
+border-radius:20px;
+display:flex;
+gap:10px;
+background:linear-gradient(90deg,#7b4cff,#00c37a);
+color:white;
+}
+
+.card img{
+width:80px;
+height:90px;
+border-radius:10px;
+cursor:pointer;
+}
+
+.right{
+margin-left:auto;
+}
+
+/* GRID */
+.grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:10px;
+padding:10px;
+}
+.grid .card{
+flex-direction:column;
+}
+
+/* BUTTON */
+.btn{
+padding:5px 10px;
+border:none;
+border-radius:10px;
+margin-top:5px;
+}
+.edit{background:#ffe58f;}
+.delete{background:#ff8f8f;}
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.5);
+display:none;
+justify-content:center;
+align-items:center;
+}
+
+.form{
+background:white;
+padding:15px;
+border-radius:15px;
+width:90%;
+max-height:90%;
+overflow:auto;
+}
+
+.form input,select{
+width:100%;
+padding:10px;
+margin:5px 0;
+border:none;
+border-radius:20px;
+background:#f5b55c;
+}
+
+/* CATEGORY LIST */
+.catItem{
+display:flex;
+justify-content:space-between;
+background:#f5b55c;
+padding:8px;
+margin:5px 0;
+border-radius:20px;
+}
+
+/* IMAGE VIEW */
+#imgView{
+position:fixed;
+top:0;left:0;
+width:100%;
+height:100%;
+background:black;
+display:none;
+justify-content:center;
+align-items:center;
+}
+#imgView img{
+max-width:90%;
+max-height:90%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">
+<div>Products List</div>
+<div onclick="openForm()">+ Add Products</div>
+</div>
+
+<div class="search">
+<input id="search" placeholder="Search Name / Code / Category">
+</div>
+
+<div class="viewSwitch">
+<div class="viewBtn" onclick="setView('list')">List</div>
+<div class="viewBtn" onclick="setView('grid')">Grid</div>
+</div>
+
+<div class="catBox" id="catBox"></div>
+
+<div id="list"></div>
+
+<!-- FORM -->
+<div class="modal" id="modal">
+<div class="form">
+
+<h2>Add Product</h2>
+
+<img id="preview" width="80">
+<input type="file" id="imageFile">
+
+<input id="name" placeholder="Product Name">
+<select id="category"></select>
+
+<input id="code" placeholder="Product Code">
+<input id="stock" placeholder="Stock">
+<input id="low" placeholder="Low Stock">
+
+<input id="buy" placeholder="Buy Price">
+<input id="sell" placeholder="Sell Price">
+<input id="mrp" placeholder="MRP">
+
+<h3>Category</h3>
+<input id="newCat" placeholder="New Category">
+<button onclick="addCategory()">Add Category</button>
+
+<div id="catList"></div>
+
+<button onclick="save()">Save</button>
+<button onclick="closeForm()">Cancel</button>
+
+</div>
+</div>
+
+<div id="imgView" onclick="this.style.display='none'">
+<img id="fullImg">
+</div>
+
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import {
+getFirestore, collection, addDoc, onSnapshot,
+deleteDoc, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+import {
+getAuth, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSy...",
+authDomain: "mywebapp-93636.firebaseapp.com",
+projectId: "mywebapp-93636"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+let user=null;
+let products=[];
+let categories=["All"];
+let view="list";
+
+/* AUTH */
+onAuthStateChanged(auth,(u)=>{
+if(!u){ alert("Login first"); return; }
+user=u;
+load();
+});
+
+/* LOAD */
+function load(){
+onSnapshot(collection(db,"products"),snap=>{
+products=[];
+categories=["All"];
+
+snap.forEach(d=>{
+let data=d.data();
+
+if(data.uid===user.uid){
+products.push({id:d.id,...data});
+
+if(!categories.includes(data.category)){
+categories.push(data.category);
+}
+}
+});
+
+renderCategories();
+render();
+});
+}
+
+/* RENDER */
+function render(){
+
+let container = view=="grid" ? "grid" : "";
+list.className = container;
+
+list.innerHTML="";
+
+products.forEach(p=>{
+list.innerHTML+=`
+<div class="card">
+
+<img src="${p.image}" onclick="viewImg('${p.image}')">
+
+<div>
+<b>${p.name}</b><br>
+MRP: ${p.mrp} | Sell: ${p.sell}
+</div>
+
+<div class="right">
+Code: ${p.code}<br>
+Category: ${p.category}<br>
+Stock: ${p.stock}<br>
+
+<button class="btn edit" onclick="edit('${p.id}')">Edit</button>
+<button class="btn delete" onclick="del('${p.id}')">Delete</button>
+</div>
+
+</div>`;
+});
+}
+
+/* CATEGORY */
+function renderCategories(){
+catBox.innerHTML="";
+categories.forEach(c=>{
+catBox.innerHTML+=`<div class="cat" onclick="filterCat('${c}')">${c}</div>`;
+});
+
+category.innerHTML="";
+categories.filter(c=>c!="All").forEach(c=>{
+category.innerHTML+=`<option>${c}</option>`;
+});
+}
+
+/* FILTER */
+window.filterCat=(c)=>{
+if(c=="All"){ render(); return; }
+
+list.innerHTML="";
+products.filter(p=>p.category==c).forEach(p=>{
+list.innerHTML+=`<div class="card">${p.name}</div>`;
+});
+};
+
+/* SEARCH */
+search.oninput=function(){
+let v=this.value.toLowerCase();
+
+renderFiltered(products.filter(p=>
+p.name.toLowerCase().includes(v) ||
+p.code.includes(v) ||
+p.category.toLowerCase().includes(v)
+));
+};
+
+function renderFiltered(data){
+list.innerHTML="";
+data.forEach(p=>{
+list.innerHTML+=`<div class="card">${p.name}</div>`;
+});
+}
+
+/* VIEW */
+window.setView=(v)=>{
+view=v;
+render();
+};
+
+/* IMAGE */
+window.viewImg=(src)=>{
+fullImg.src=src;
+imgView.style.display="flex";
+};
+
+/* SAVE */
+window.save=async()=>{
+
+if(!name.value || !code.value){ alert("Fill all"); return; }
+
+let data={
+name:name.value,
+code:code.value,
+category:category.value,
+stock:Number(stock.value),
+low:Number(low.value),
+buy:Number(buy.value),
+sell:Number(sell.value),
+mrp:Number(mrp.value),
+image:preview.src,
+uid:user.uid
+};
+
+await addDoc(collection(db,"products"),data);
+
+closeForm();
+};
+
+/* DELETE */
+window.del=async id=>{
+await deleteDoc(doc(db,"products",id));
+};
+
+/* CATEGORY ADD */
+window.addCategory=()=>{
+let c=newCat.value.trim();
+if(c && !categories.includes(c)){
+categories.push(c);
+renderCategories();
+}
+};
+
+/* FORM */
+window.openForm=()=>modal.style.display="flex";
+window.closeForm=()=>modal.style.display="none";
+
+</script>
+
+</body>
+</html>
